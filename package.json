@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "vercel-build": "webpack --mode production"
+    "vercel-build": "webpack --mode production && cp src/index.html dist/"
   },
   "author": "",
   "license": "ISC",
@@ -16,7 +16,9 @@
     "mongodb": "^5.0.0"
   },
   "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
     "sass": "^1.84.0",
     "sass-loader": "^16.0.4",
     "style-loader": "^4.0.0",
