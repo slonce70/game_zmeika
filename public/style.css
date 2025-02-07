@@ -314,4 +314,51 @@ button:hover {
   .score-container {
     font-size: 1em;
   }
+}
+
+/* Добавим стили для счетчика игроков */
+.players-online {
+  font-size: 0.8em;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-color);
+}
+
+.players-count {
+  color: var(--accent-color);
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+/* Обновим стили для даты в карточках игроков */
+.player-date {
+  font-size: 0.6em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+/* Обновим стили для таблицы лидеров */
+.leaderboard td:last-child {
+  font-size: 0.6em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Добавим анимацию для счетчика игроков */
+@keyframes countChange {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: #60d888;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.players-count.changed {
+  animation: countChange 0.3s ease-out;
 } 

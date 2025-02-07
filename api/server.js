@@ -1,6 +1,17 @@
 const { MongoClient } = require('mongodb');
 
 let cachedDb = null;
+let activePlayers = new Map(); // Хранит активных игроков и время их последней активности
+
+// Очистка неактивных игроков каждые 60 секунд
+setInterval(() => {
+  const now = Date.now();
+  for (const [player, lastSeen] of activePlayers.entries()) {
+    if (now - lastSeen > 60000) { // Если игрок не отправлял heartbeat более минуты
+      activePlayers.delete(player);
+    }
+  }
+}, 60000);
 
 async function connectToDatabase(uri) {
   if (cachedDb) {
@@ -33,6 +44,24 @@ module.exports = async (req, res) => {
     const db = await connectToDatabase(process.env.MONGODB_URI);
     const collection = db.collection('leaderboard');
 
+    // Обработка heartbeat
+    if (req.url.endsWith('/heartbeat')) {
+      const { username, timestamp } = req.body;
+      if (username) {
+        activePlayers.set(username, Date.now());
+      }
+      return res.json({ activePlayers: activePlayers.size });
+    }
+
+    // Обработка выхода игрока
+    if (req.url.endsWith('/leave')) {
+      const { username } = req.body;
+      if (username) {
+        activePlayers.delete(username);
+      }
+      return res.json({ activePlayers: activePlayers.size });
+    }
+
     if (req.method === 'GET') {
       const leaderboard = await collection
         .find({})
@@ -40,7 +69,10 @@ module.exports = async (req, res) => {
         .limit(100)
         .toArray();
       
-      res.json(leaderboard);
+      res.json({
+        scores: leaderboard,
+        activePlayers: activePlayers.size
+      });
     } 
     else if (req.method === 'POST') {
       const { username, score } = req.body;
@@ -84,7 +116,11 @@ module.exports = async (req, res) => {
       // Определяем ранг игрока
       const rank = leaderboard.findIndex(entry => entry.username === username) + 1;
       
-      res.json({ rank, leaderboard });
+      res.json({ 
+        rank, 
+        leaderboard,
+        activePlayers: activePlayers.size
+      });
     }
   } catch (error) {
     console.error('Operation failed:', error);

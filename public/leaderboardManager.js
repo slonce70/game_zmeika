@@ -5,13 +5,19 @@ class LeaderboardManager {
     this.maxEntries = 100;
     // API URL теперь всегда будет относительным
     this.apiUrl = '/api/server';
+    this.activePlayers = 0;
+    this.heartbeatInterval = null;
+    this.lastHeartbeat = null;
   }
 
   async loadLeaderboard() {
     try {
       const response = await fetch(this.apiUrl);
       if (!response.ok) throw new Error('Failed to load leaderboard');
-      this.leaderboard = await response.json();
+      const data = await response.json();
+      this.leaderboard = data.scores;
+      this.activePlayers = data.activePlayers;
+      this.updateActivePlayersDisplay();
     } catch (error) {
       console.error('Error loading leaderboard:', error);
       // Используем локальное хранилище как резервный вариант
@@ -46,6 +52,91 @@ class LeaderboardManager {
       // Если сервер недоступен, сохраняем локально
       return this.addLocalScore(username, score);
     }
+  }
+
+  startHeartbeat() {
+    // Отправляем первый heartbeat
+    this.sendHeartbeat();
+
+    // Устанавливаем интервал для heartbeat
+    this.heartbeatInterval = setInterval(() => {
+      this.sendHeartbeat();
+    }, 30000); // каждые 30 секунд
+
+    // Очищаем интервал при закрытии страницы
+    window.addEventListener('beforeunload', () => {
+      this.stopHeartbeat();
+    });
+  }
+
+  async sendHeartbeat() {
+    try {
+      const response = await fetch(`${this.apiUrl}/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username: this.currentPlayer,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to send heartbeat');
+      
+      const data = await response.json();
+      this.activePlayers = data.activePlayers;
+      this.updateActivePlayersDisplay();
+    } catch (error) {
+      console.error('Error sending heartbeat:', error);
+    }
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+
+    // Отправляем уведомление о выходе
+    fetch(`${this.apiUrl}/leave`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username: this.currentPlayer })
+    }).catch(console.error);
+  }
+
+  updateActivePlayersDisplay() {
+    const activePlayersElement = document.getElementById('activePlayers');
+    if (activePlayersElement) {
+      activePlayersElement.textContent = this.activePlayers;
+    }
+  }
+
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Форматируем время
+    const time = date.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Если сегодня
+    if (date.toDateString() === today.toDateString()) {
+      return `Сегодня, ${time}`;
+    }
+    // Если вчера
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Вчера, ${time}`;
+    }
+    // Иначе полная дата
+    return `${date.toLocaleDateString('ru-RU')}, ${time}`;
   }
 
   addLocalScore(username, score) {

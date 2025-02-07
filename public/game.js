@@ -25,6 +25,8 @@ class Game {
         this.leaderboardManager.currentPlayer = username;
         document.getElementById('loginModal').style.display = 'none';
         this.initializeGame();
+        // Запускаем отслеживание активности
+        this.leaderboardManager.startHeartbeat();
       }
     });
 
@@ -56,7 +58,6 @@ class Game {
     const leaderboardBody = document.getElementById('leaderboardBody');
     leaderboardBody.innerHTML = '';
 
-    // Обновляем данные с сервера перед показом
     await this.leaderboardManager.loadLeaderboard();
     const scores = this.leaderboardManager.getTopScores();
 
@@ -70,7 +71,7 @@ class Game {
         <td>${index + 1}</td>
         <td>${this.escapeHtml(score.username)}</td>
         <td>${score.score}</td>
-        <td>${new Date(score.date).toLocaleDateString()}</td>
+        <td>${this.leaderboardManager.formatDate(score.date)}</td>
       `;
       leaderboardBody.appendChild(row);
     });
@@ -300,6 +301,12 @@ class Game {
     
     sidebarLeaderboard.innerHTML = '';
     
+    // Обновляем счетчик активных игроков
+    const activePlayersCounter = document.getElementById('activePlayersCounter');
+    if (activePlayersCounter) {
+      activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
+    }
+    
     topPlayers.forEach((player, index) => {
       const playerCard = document.createElement('div');
       playerCard.className = 'player-card';
@@ -312,10 +319,10 @@ class Game {
         <div class="player-info">
           <div class="player-name">${this.escapeHtml(player.username)}</div>
           <div class="player-score">${player.score}</div>
+          <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
         </div>
       `;
 
-      // Добавляем анимацию при обновлении счета
       const previousScore = this.previousScores?.get(player.username);
       if (previousScore && previousScore !== player.score) {
         gsap.from(playerCard, {
@@ -328,7 +335,6 @@ class Game {
       sidebarLeaderboard.appendChild(playerCard);
     });
 
-    // Сохраняем текущие счета для следующего сравнения
     this.previousScores = new Map(
       topPlayers.map(player => [player.username, player.score])
     );
