@@ -1,11 +1,10 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
-  entry: {
-    main: ['./src/game.js', './src/style.css']
-  },
+  entry: './src/game.js',
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist'),
@@ -25,13 +24,10 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
-          {
-            loader: 'css-loader',
-            options: {
-              importLoaders: 1
-            }
-          }
+          process.env.NODE_ENV === 'production' 
+            ? MiniCssExtractPlugin.loader
+            : 'style-loader',
+          'css-loader'
         ]
       },
       {
@@ -40,19 +36,24 @@ module.exports = {
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
-        type: 'asset/resource'
+        type: 'asset/resource',
+        generator: {
+          filename: 'assets/images/[name][ext]'
+        }
       },
       {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
-        type: 'asset/resource'
+        type: 'asset/resource',
+        generator: {
+          filename: 'assets/fonts/[name][ext]'
+        }
       }
     ]
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
-      filename: 'index.html',
-      inject: true
+      filename: 'index.html'
     }),
     new CopyWebpackPlugin({
       patterns: [
@@ -62,6 +63,9 @@ module.exports = {
           noErrorOnMissing: true
         }
       ]
+    }),
+    new MiniCssExtractPlugin({
+      filename: '[name].css'
     })
   ],
   resolve: {
