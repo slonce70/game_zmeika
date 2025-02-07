@@ -1,0 +1,426 @@
+:root {
+  --primary-color: #4a4a4a;
+  --accent-color: #50c878;
+  --bg-color: #1a1a1a;
+  --text-color: #ffffff;
+  --grid-color: #2a2a2a;
+  --modal-bg: rgba(0, 0, 0, 0.8);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg-color);
+  font-family: 'Press Start 2P', cursive;
+  color: var(--text-color);
+}
+
+.game-container {
+  padding: 20px;
+  background: var(--primary-color);
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.game-header {
+  text-align: center;
+}
+
+h1 {
+  font-size: 2em;
+  margin-bottom: 20px;
+  color: var(--accent-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.score-container {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.score-value {
+  color: var(--accent-color);
+}
+
+.canvas-container {
+  padding: 10px;
+  background: var(--grid-color);
+  border-radius: 5px;
+  border: 4px solid var(--accent-color);
+}
+
+canvas {
+  display: block;
+  background: #000;
+  border-radius: 2px;
+}
+
+.controls {
+  text-align: center;
+}
+
+.control-info {
+  font-size: 0.8em;
+  margin-bottom: 15px;
+}
+
+.restart-btn {
+  padding: 10px 20px;
+  font-family: 'Press Start 2P', cursive;
+  background: var(--accent-color);
+  border: none;
+  border-radius: 5px;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.restart-btn:hover {
+  transform: scale(1.05);
+  background-color: #60d888;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Анимация для счета */
+@keyframes scoreUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-update {
+  animation: scoreUpdate 0.3s ease-out;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .game-container {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.5em;
+  }
+
+  .score-container {
+    font-size: 1em;
+  }
+}
+
+/* Модальные окна */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--modal-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--primary-color);
+  padding: 20px;
+  border-radius: 10px;
+  min-width: 300px;
+  max-width: 500px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+.modal h2 {
+  color: var(--accent-color);
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+/* Форма логина */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-form input {
+  padding: 10px;
+  font-family: inherit;
+  background: var(--bg-color);
+  border: 2px solid var(--accent-color);
+  color: var(--text-color);
+  border-radius: 5px;
+  font-size: 0.8em;
+}
+
+.login-form button {
+  padding: 10px;
+  font-family: inherit;
+  background: var(--accent-color);
+  border: none;
+  color: var(--text-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.login-form button:hover {
+  transform: scale(1.05);
+  background-color: #60d888;
+}
+
+/* Таблица лидеров */
+.leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.leaderboard th,
+.leaderboard td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--grid-color);
+  font-size: 0.7em;
+}
+
+.leaderboard th {
+  color: var(--accent-color);
+  font-weight: normal;
+}
+
+.leaderboard tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard tr.current-player {
+  background: rgba(80, 200, 120, 0.2);
+}
+
+.leaderboard-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.leaderboard-controls button {
+  padding: 8px 15px;
+  font-family: inherit;
+  font-size: 0.7em;
+  background: var(--accent-color);
+  border: none;
+  color: var(--text-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.leaderboard-controls button:hover {
+  transform: scale(1.05);
+  background-color: #60d888;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Добавляем стили для кнопки лидеров в основном интерфейсе */
+.leaderboard-btn {
+  margin-top: 10px;
+  padding: 8px 15px;
+  font-family: inherit;
+  font-size: 0.7em;
+  background: var(--accent-color);
+  border: none;
+  color: var(--text-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.leaderboard-btn:hover {
+  transform: scale(1.05);
+  background-color: #60d888;
+}
+
+/* Обертка для игры и боковой панели */
+.game-wrapper {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Боковая панель с топ-10 */
+.top-players-sidebar {
+  background: var(--primary-color);
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 300px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.5s ease-out;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent-color);
+}
+
+.sidebar-header h2 {
+  font-size: 1.2em;
+  color: var(--accent-color);
+  margin: 0;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7em;
+  color: #50c878;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #50c878;
+  animation: pulse 2s infinite;
+}
+
+.top-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.player-card:hover {
+  transform: translateX(5px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.player-card.current-player {
+  background: rgba(80, 200, 120, 0.2);
+  border-left: 3px solid var(--accent-color);
+}
+
+.player-rank {
+  font-size: 1.2em;
+  color: var(--accent-color);
+  min-width: 30px;
+}
+
+.player-info {
+  flex-grow: 1;
+  padding: 0 10px;
+}
+
+.player-name {
+  font-size: 0.8em;
+  margin-bottom: 4px;
+}
+
+.player-score {
+  font-size: 1em;
+  color: var(--accent-color);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(80, 200, 120, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(80, 200, 120, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(80, 200, 120, 0);
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+  .game-wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .top-players-sidebar {
+    width: 100%;
+    max-width: 600px;
+  }
+} 

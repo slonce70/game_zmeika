@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="game-wrapper">
+    <!-- Основной контейнер игры -->
+    <div class="game-container">
+      <div class="game-header">
+        <h1>Snake Game</h1>
+        <div class="score-container">
+          <span class="score-label">Score:</span>
+          <span class="score-value">0</span>
+        </div>
+      </div>
+      <div class="canvas-container">
+        <!-- Canvas создается динамически в game.js -->
+      </div>
+      <div class="controls">
+        <div class="control-info">
+          <p>Use arrow keys to control the snake</p>
+          <button class="restart-btn">Restart Game</button>
+          <button class="leaderboard-btn">Full Leaderboard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Боковая панель с топ-10 -->
+    <div class="top-players-sidebar">
+      <div class="sidebar-header">
+        <h2>Top 10 Players</h2>
+        <div class="live-indicator">
+          <span class="pulse"></span>
+          Live
+        </div>
+      </div>
+      <div class="top-players-list" id="sidebarLeaderboard">
+        <!-- Заполняется динамически -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно логина -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal">
+      <h2>Enter Your Name</h2>
+      <form class="login-form" id="loginForm">
+        <input type="text" id="username" placeholder="Your name" required minlength="2" maxlength="15">
+        <button type="submit">Start Game</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно таблицы лидеров -->
+  <div class="modal-overlay" id="leaderboardModal" style="display: none;">
+    <div class="modal">
+      <h2>Top Players</h2>
+      <table class="leaderboard">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Score</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <!-- Заполняется динамически -->
+        </tbody>
+      </table>
+      <div class="leaderboard-controls">
+        <button id="closeLeaderboard">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="bundle.js"></script>
+</body>
+</html> 
