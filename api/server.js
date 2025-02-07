@@ -1,10 +1,29 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs').promises;
 const path = require('path');
+const express = require('express');
+const bodyParser = require('body-parser');
 
 let cachedDb = null;
 let activePlayers = new Map(); // Хранит активных игроков и время их последней активности
-const LEADERBOARD_FILE = path.join(__dirname, 'leaderboard.json');
+
+// Ensure data directory exists
+const DATA_DIR = path.join(__dirname, 'data');
+const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
+
+// Initialize storage
+async function initializeStorage() {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    try {
+      await fs.access(LEADERBOARD_FILE);
+    } catch {
+      await fs.writeFile(LEADERBOARD_FILE, '[]');
+    }
+  } catch (error) {
+    console.error('Failed to initialize storage:', error);
+  }
+}
 
 // Очистка неактивных игроков каждые 30 секунд
 setInterval(() => {
@@ -49,11 +68,14 @@ const allowedOrigins = [
   'http://127.0.0.1:9000'
 ];
 
-// CORS middleware
-const corsMiddleware = (req, res, next) => {
+// Initialize express app for local development
+const app = express();
+
+// Middleware
+app.use(bodyParser.json());
+app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // In development, allow any origin
   if (isDev) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   } else if (allowedOrigins.includes(origin)) {
@@ -70,26 +92,21 @@ const corsMiddleware = (req, res, next) => {
     return;
   }
   
-  if (typeof next === 'function') {
-    next();
-  }
-};
+  next();
+});
 
-// Add error handling middleware
-const errorHandler = (error, req, res, next) => {
+// Error handling middleware
+app.use((error, req, res, next) => {
   console.error('API Error:', error);
   res.status(500).json({
     error: 'Internal Server Error',
     message: isDev ? error.message : 'An unexpected error occurred'
   });
-};
+});
 
-module.exports = async (req, res) => {
+// Request handler
+async function handleRequest(req, res) {
   try {
-    // Apply CORS
-    corsMiddleware(req, res);
-
-    // Handle heartbeat and leave regardless of storage type
     if (req.url.endsWith('/heartbeat')) {
       const { username } = req.body || {};
       if (!username) {
@@ -137,7 +154,7 @@ module.exports = async (req, res) => {
         }
 
         leaderboard.sort((a, b) => b.score - a.score);
-        if (leaderboard.length > 100) leaderboard = leaderboard.slice(0, 100);
+        leaderboard = leaderboard.slice(0, 100);
 
         await saveLeaderboardToFile(leaderboard);
         const rank = leaderboard.findIndex(entry => entry.username === username) + 1;
@@ -171,23 +188,29 @@ module.exports = async (req, res) => {
         return res.json({ rank, leaderboard, activePlayers: activePlayers.size });
       }
     }
-  } catch (error) {
-    errorHandler(error, req, res);
-  }
-};
 
-// --- Begin local server wrapper ---
+    return res.status(404).json({ error: 'Not found' });
+  } catch (error) {
+    console.error('Request handler error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: isDev ? error.message : 'An unexpected error occurred'
+    });
+  }
+}
+
+// Initialize storage on startup
+initializeStorage();
+
+// Export handler for serverless environment
+module.exports = handleRequest;
+
+// Start local server if running directly
 if (require.main === module) {
-  const express = require('express');
-  const app = express();
-  app.use(express.json());
-  app.all('*', (req, res) => {
-    // Delegate handling to the exported function
-    module.exports(req, res);
-  });
+  app.all('*', handleRequest);
+  
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Local API server running on port ${PORT}`);
   });
-}
-// --- End local server wrapper --- 
+} 

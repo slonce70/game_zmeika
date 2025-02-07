@@ -12,14 +12,67 @@ class Game {
       this.updateSidebarLeaderboard();
     });
     
-    // Инициализация модальных окон
-    this.initializeModals();
+    this.boundGameLoop = this.gameLoop.bind(this);
+    this.boundHandleInput = this.handleInput.bind(this);
+    this.boundHandleRestart = this.handleRestart.bind(this);
+    this.boundHandleVisibilityChange = this.handleVisibilityChange.bind(this);
     
-    // Показываем окно логина
+    // Initialize game state
+    this.isPaused = false;
+    this.isGameOver = false;
+    this.updateInterval = null;
+    
+    // Initialize modals
+    this.initializeModals();
     this.showLoginModal();
-
-    // Запускаем периодическое обновление таблицы лидеров
     this.startLeaderboardUpdates();
+
+    // Add visibility change handler
+    document.addEventListener('visibilitychange', this.boundHandleVisibilityChange);
+  }
+
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.pause();
+    } else if (!this.isGameOver) {
+      this.resume();
+    }
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    if (!this.isGameOver) {
+      this.isPaused = false;
+      requestAnimationFrame(this.boundGameLoop);
+    }
+  }
+
+  cleanup() {
+    // Stop game loop
+    this.isPaused = true;
+    this.isGameOver = true;
+
+    // Remove event listeners
+    document.removeEventListener('keydown', this.boundHandleInput);
+    document.removeEventListener('visibilitychange', this.boundHandleVisibilityChange);
+    document.querySelector('.restart-btn')?.removeEventListener('click', this.boundHandleRestart);
+
+    // Clean up intervals
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+
+    // Clean up leaderboard manager
+    this.leaderboardManager.cleanup();
+
+    // Remove canvas if it exists
+    if (this.canvas && this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas);
+    }
   }
 
   initializeModals() {
@@ -86,35 +139,41 @@ class Game {
   }
 
   initializeGame() {
-    // Создаем canvas и устанавливаем его размеры
+    // Create canvas
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
-    this.canvas.width = 600;
-    this.canvas.height = 400;
-    document.querySelector('.canvas-container').appendChild(this.canvas);
-
-    this.gridSize = 20;
-    this.isPaused = false;
     
-    // Создаем объекты игры
+    // Set canvas size based on viewport
+    const container = document.querySelector('.canvas-container');
+    const maxWidth = Math.min(600, container.clientWidth - 20);
+    const maxHeight = Math.min(400, window.innerHeight - 200);
+    
+    this.canvas.width = maxWidth;
+    this.canvas.height = maxHeight;
+    container.appendChild(this.canvas);
+
+    this.gridSize = Math.floor(Math.min(this.canvas.width, this.canvas.height) / 20);
+    this.isPaused = false;
+    this.isGameOver = false;
+    
+    // Create game objects
     this.snake = new Snake();
     this.food = new Food(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.scoreManager = new ScoreManager();
 
-    // Привязываем функции
-    this.gameLoop = this.gameLoop.bind(this);
-    this.handleInput = this.handleInput.bind(this);
-    this.handleRestart = this.handleRestart.bind(this);
-    
-    // Добавляем обработчики событий
-    document.addEventListener('keydown', this.handleInput);
-    document.querySelector('.restart-btn').addEventListener('click', this.handleRestart);
+    // Add event listeners
+    document.addEventListener('keydown', this.boundHandleInput);
+    document.querySelector('.restart-btn').addEventListener('click', this.boundHandleRestart);
 
+    // Initialize touch controls
+    this.initializeTouchControls();
+
+    // Start game loop
     this.lastTime = 0;
-    this.interval = 200; // интервал обновления в миллисекундах
+    this.interval = 200;
     this.accumulator = 0;
 
-    // Анимация появления игры
+    // Animate game start
     gsap.from(this.canvas, {
       duration: 0.5,
       opacity: 0,
@@ -122,57 +181,76 @@ class Game {
       ease: "back.out"
     });
 
-    // Add touch controls with passive listeners
-    const addTouchControls = () => {
-      let touchStartX = 0;
-      let touchStartY = 0;
-      
-      document.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      }, { passive: true });
+    requestAnimationFrame(this.boundGameLoop);
+  }
 
-      document.addEventListener('touchmove', (e) => {
-        if (!touchStartX || !touchStartY) return;
+  initializeTouchControls() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let minSwipeDistance = 30;
+    let touchStartTime = 0;
+    let maxSwipeTime = 300;
 
-        const touchEndX = e.touches[0].clientX;
-        const touchEndY = e.touches[0].clientY;
-
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-
-        // Determine swipe direction
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // Horizontal swipe
-          if (deltaX > 0 && this.snake.direction !== 'left') {
-            this.snake.newDirection = 'right';
-          } else if (deltaX < 0 && this.snake.direction !== 'right') {
-            this.snake.newDirection = 'left';
-          }
-        } else {
-          // Vertical swipe
-          if (deltaY > 0 && this.snake.direction !== 'up') {
-            this.snake.newDirection = 'down';
-          } else if (deltaY < 0 && this.snake.direction !== 'down') {
-            this.snake.newDirection = 'up';
-          }
-        }
-
-        touchStartX = touchEndX;
-        touchStartY = touchEndY;
-      }, { passive: true });
-
-      document.addEventListener('touchend', () => {
-        touchStartX = 0;
-        touchStartY = 0;
-      }, { passive: true });
+    const handleTouchStart = (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
     };
 
-    // Initialize touch controls
-    addTouchControls();
+    const handleTouchMove = (e) => {
+      if (!touchStartX || !touchStartY) return;
 
-    // Start the game loop
-    this.gameLoop();
+      const touchEndX = e.touches[0].clientX;
+      const touchEndY = e.touches[0].clientY;
+      const touchEndTime = Date.now();
+
+      // Ignore if swipe took too long
+      if (touchEndTime - touchStartTime > maxSwipeTime) {
+        touchStartX = touchEndX;
+        touchStartY = touchEndY;
+        touchStartTime = touchEndTime;
+        return;
+      }
+
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Only handle if swipe distance is sufficient
+      if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
+        return;
+      }
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (deltaX > 0 && this.snake.direction !== 'left') {
+          this.snake.newDirection = 'right';
+        } else if (deltaX < 0 && this.snake.direction !== 'right') {
+          this.snake.newDirection = 'left';
+        }
+      } else {
+        // Vertical swipe
+        if (deltaY > 0 && this.snake.direction !== 'up') {
+          this.snake.newDirection = 'down';
+        } else if (deltaY < 0 && this.snake.direction !== 'down') {
+          this.snake.newDirection = 'up';
+        }
+      }
+
+      // Reset touch start position
+      touchStartX = touchEndX;
+      touchStartY = touchEndY;
+      touchStartTime = touchEndTime;
+    };
+
+    const handleTouchEnd = () => {
+      touchStartX = 0;
+      touchStartY = 0;
+    };
+
+    // Add touch event listeners with passive option
+    this.canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    this.canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
+    this.canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
   }
 
   drawGrid() {
