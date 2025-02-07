@@ -1,3 +1,4 @@
+import './style.css';
 import Snake from './snake.js';
 import Food from './food.js';
 import ScoreManager from './scoreManager.js';
