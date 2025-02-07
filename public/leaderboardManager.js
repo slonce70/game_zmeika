@@ -3,7 +3,7 @@ class LeaderboardManager {
     this.leaderboard = [];
     this.currentPlayer = null;
     this.maxEntries = 100;
-    this.apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
+    this.apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api' : '/api';
     this.activePlayers = 0;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
