@@ -3,15 +3,15 @@ const { MongoClient } = require('mongodb');
 let cachedDb = null;
 let activePlayers = new Map(); // Хранит активных игроков и время их последней активности
 
-// Очистка неактивных игроков каждые 60 секунд
+// Очистка неактивных игроков каждые 30 секунд
 setInterval(() => {
   const now = Date.now();
   for (const [player, lastSeen] of activePlayers.entries()) {
-    if (now - lastSeen > 60000) { // Если игрок не отправлял heartbeat более минуты
+    if (now - lastSeen > 30000) { // Если игрок не отправлял heartbeat более 30 секунд
       activePlayers.delete(player);
     }
   }
-}, 60000);
+}, 30000);
 
 async function connectToDatabase(uri) {
   if (cachedDb) {
@@ -51,26 +51,27 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const db = await connectToDatabase(process.env.MONGODB_URI);
-    const collection = db.collection('leaderboard');
-
     // Обработка heartbeat
-    if (req.url === '/api/heartbeat') {
+    if (req.url.endsWith('/heartbeat')) {
       const { username } = req.body || {};
       if (username) {
         activePlayers.set(username, Date.now());
+        return res.json({ activePlayers: activePlayers.size });
       }
-      return res.json({ activePlayers: activePlayers.size });
+      return res.status(400).json({ error: 'Username is required' });
     }
 
     // Обработка выхода игрока
-    if (req.url === '/api/leave') {
+    if (req.url.endsWith('/leave')) {
       const { username } = req.body || {};
       if (username) {
         activePlayers.delete(username);
       }
       return res.json({ activePlayers: activePlayers.size });
     }
+
+    const db = await connectToDatabase(process.env.MONGODB_URI);
+    const collection = db.collection('leaderboard');
 
     if (req.method === 'GET') {
       const leaderboard = await collection

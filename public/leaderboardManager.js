@@ -8,6 +8,7 @@ class LeaderboardManager {
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
     this.retryDelay = 5000; // 5 секунд между повторными попытками
+    this.isHeartbeatActive = false;
   }
 
   async loadLeaderboard() {
@@ -16,8 +17,12 @@ class LeaderboardManager {
       if (!response.ok) throw new Error('Failed to load leaderboard');
       const data = await response.json();
       this.leaderboard = data.scores;
-      this.activePlayers = data.activePlayers;
-      this.updateActivePlayersDisplay();
+      
+      // Обновляем количество активных игроков только если не получаем его через heartbeat
+      if (!this.isHeartbeatActive) {
+        this.activePlayers = data.activePlayers;
+        this.updateActivePlayersDisplay();
+      }
       return true;
     } catch (error) {
       console.error('Error loading leaderboard:', error);
@@ -75,19 +80,20 @@ class LeaderboardManager {
       if (!response.ok) throw new Error('Failed to send heartbeat');
       
       const data = await response.json();
-      if (data.activePlayers !== this.activePlayers) {
-        this.activePlayers = data.activePlayers;
-        this.updateActivePlayersDisplay();
-      }
+      this.activePlayers = data.activePlayers;
+      this.updateActivePlayersDisplay();
+      this.isHeartbeatActive = true;
     } catch (error) {
       console.error('Error sending heartbeat:', error);
-      clearInterval(this.heartbeatInterval);
+      this.isHeartbeatActive = false;
+      // Пробуем перезапустить heartbeat
+      this.stopHeartbeat();
       setTimeout(() => this.startHeartbeat(), this.retryDelay);
     }
   }
 
   startHeartbeat() {
-    if (!this.currentPlayer) return;
+    if (!this.currentPlayer || this.heartbeatInterval) return;
 
     // Отправляем первый heartbeat немедленно
     this.sendHeartbeat();
@@ -95,21 +101,23 @@ class LeaderboardManager {
     // Устанавливаем интервал для регулярных heartbeat
     this.heartbeatInterval = setInterval(() => {
       this.sendHeartbeat();
-    }, 15000); // Уменьшаем интервал до 15 секунд
+    }, 15000); // Каждые 15 секунд
 
-    // Добавляем обработчик для видимости страницы
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        this.stopHeartbeat();
-      } else {
-        this.startHeartbeat();
-      }
-    });
+    // Добавляем обработчики для видимости страницы
+    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+  }
 
-    // Очищаем интервал при закрытии страницы
-    window.addEventListener('beforeunload', () => {
+  handleVisibilityChange() {
+    if (document.hidden) {
       this.stopHeartbeat();
-    });
+    } else {
+      this.startHeartbeat();
+    }
+  }
+
+  handleBeforeUnload() {
+    this.stopHeartbeat();
   }
 
   stopHeartbeat() {
@@ -127,16 +135,20 @@ class LeaderboardManager {
         body: JSON.stringify({ username: this.currentPlayer })
       }).catch(console.error);
     }
+    
+    this.isHeartbeatActive = false;
   }
 
   updateActivePlayersDisplay() {
     const counter = document.getElementById('activePlayersCounter');
     if (counter) {
-      const oldValue = parseInt(counter.textContent);
-      counter.textContent = this.activePlayers;
+      const oldValue = parseInt(counter.textContent) || 0;
+      const newValue = this.activePlayers || 0;
+      
+      counter.textContent = newValue;
       
       // Добавляем анимацию при изменении значения
-      if (oldValue !== this.activePlayers) {
+      if (oldValue !== newValue) {
         counter.classList.remove('changed');
         void counter.offsetWidth; // Форсируем reflow
         counter.classList.add('changed');
