@@ -40,41 +40,69 @@ async function saveLeaderboardToFile(leaderboard) {
   await fs.writeFile(LEADERBOARD_FILE, JSON.stringify(leaderboard, null, 2));
 }
 
-module.exports = async (req, res) => {
-  // Обновленная настройка CORS
-  const allowedOrigins = [
-    'https://game-zmeika.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:9000'
-  ];
-  
+const isDev = process.env.NODE_ENV !== 'production';
+const allowedOrigins = [
+  'https://game-zmeika.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:9000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:9000'
+];
+
+// CORS middleware
+const corsMiddleware = (req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  
+  // In development, allow any origin
+  if (isDev) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Headers', 
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Обработка preflight запросов
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
+  
+  if (typeof next === 'function') {
+    next();
+  }
+};
 
+// Add error handling middleware
+const errorHandler = (error, req, res, next) => {
+  console.error('API Error:', error);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: isDev ? error.message : 'An unexpected error occurred'
+  });
+};
+
+module.exports = async (req, res) => {
   try {
+    // Apply CORS
+    corsMiddleware(req, res);
+
     // Handle heartbeat and leave regardless of storage type
     if (req.url.endsWith('/heartbeat')) {
       const { username } = req.body || {};
-      if (username) {
+      if (!username) {
+        return res.status(400).json({ error: 'Username is required' });
+      }
+      
+      try {
         activePlayers.set(username, Date.now());
         return res.json({ activePlayers: activePlayers.size });
+      } catch (err) {
+        console.error('Heartbeat error:', err);
+        return res.status(500).json({ error: 'Failed to process heartbeat' });
       }
-      return res.status(400).json({ error: 'Username is required' });
     }
 
     if (req.url.endsWith('/leave')) {
@@ -144,8 +172,7 @@ module.exports = async (req, res) => {
       }
     }
   } catch (error) {
-    console.error('Operation failed:', error);
-    res.status(500).json({ error: 'Database operation failed' });
+    errorHandler(error, req, res);
   }
 };
 

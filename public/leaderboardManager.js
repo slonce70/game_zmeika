@@ -3,59 +3,91 @@ class LeaderboardManager {
     this.leaderboard = [];
     this.currentPlayer = null;
     this.maxEntries = 100;
-    this.apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api' : '/api';
+    this.apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+      ? `http://${window.location.hostname}:3000/api` 
+      : '/api';
     this.activePlayers = 0;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
-    this.retryDelay = 5000; // 5 секунд между повторными попытками
+    this.retryDelay = 5000;
+    this.maxRetries = 3;
+    this.currentRetries = 0;
     this.isHeartbeatActive = false;
+  }
+
+  async fetchWithRetry(url, options = {}, retries = this.maxRetries) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        return this.fetchWithRetry(url, options, retries - 1);
+      }
+      throw error;
+    }
   }
 
   async loadLeaderboard() {
     try {
-      const response = await fetch(this.apiUrl);
-      if (!response.ok) throw new Error('Failed to load leaderboard');
-      const data = await response.json();
-      this.leaderboard = data.scores;
+      const data = await this.fetchWithRetry(this.apiUrl);
+      this.leaderboard = data.scores || [];
       
-      // Обновляем количество активных игроков только если не получаем его через heartbeat
-      if (!this.isHeartbeatActive) {
+      if (!this.isHeartbeatActive && typeof data.activePlayers === 'number') {
         this.activePlayers = data.activePlayers;
         this.updateActivePlayersDisplay();
       }
+      
+      this.currentRetries = 0;
       return true;
     } catch (error) {
       console.error('Error loading leaderboard:', error);
-      // Используем локальное хранилище как резервный вариант
       const stored = localStorage.getItem('snakeLeaderboard');
       if (stored) {
-        this.leaderboard = JSON.parse(stored);
+        try {
+          this.leaderboard = JSON.parse(stored);
+        } catch (e) {
+          console.error('Error parsing stored leaderboard:', e);
+          this.leaderboard = [];
+        }
       }
-      // Планируем повторную попытку
-      setTimeout(() => this.loadLeaderboard(), this.retryDelay);
+      
+      if (this.currentRetries < this.maxRetries) {
+        this.currentRetries++;
+        setTimeout(() => this.loadLeaderboard(), this.retryDelay);
+      }
       return false;
     }
   }
 
   async saveScore(username, score) {
     try {
-      const response = await fetch(this.apiUrl, {
+      const data = await this.fetchWithRetry(this.apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ username, score })
       });
 
-      if (!response.ok) throw new Error('Failed to save score');
+      if (data.leaderboard) {
+        this.leaderboard = data.leaderboard;
+        if (typeof data.activePlayers === 'number') {
+          this.activePlayers = data.activePlayers;
+          this.updateActivePlayersDisplay();
+        }
+        localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
+      }
       
-      const data = await response.json();
-      this.leaderboard = data.leaderboard;
-      this.activePlayers = data.activePlayers;
-      
-      localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
-      
-      return data.rank;
+      return data.rank || this.getPlayerRank(username);
     } catch (error) {
       console.error('Error saving score:', error);
       return this.addLocalScore(username, score);
@@ -66,29 +98,26 @@ class LeaderboardManager {
     if (!this.currentPlayer) return;
 
     try {
-      const response = await fetch(`${this.apiUrl}/heartbeat`, {
+      const data = await this.fetchWithRetry(`${this.apiUrl}/heartbeat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           username: this.currentPlayer,
           timestamp: Date.now()
         })
       });
 
-      if (!response.ok) throw new Error('Failed to send heartbeat');
-      
-      const data = await response.json();
-      this.activePlayers = data.activePlayers;
-      this.updateActivePlayersDisplay();
-      this.isHeartbeatActive = true;
+      if (typeof data.activePlayers === 'number') {
+        this.activePlayers = data.activePlayers;
+        this.updateActivePlayersDisplay();
+        this.isHeartbeatActive = true;
+      }
     } catch (error) {
       console.error('Error sending heartbeat:', error);
       this.isHeartbeatActive = false;
-      // Пробуем перезапустить heartbeat
-      this.stopHeartbeat();
-      setTimeout(() => this.startHeartbeat(), this.retryDelay);
+      if (this.heartbeatInterval) {
+        this.stopHeartbeat();
+        setTimeout(() => this.startHeartbeat(), this.retryDelay);
+      }
     }
   }
 

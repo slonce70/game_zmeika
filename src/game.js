@@ -122,8 +122,57 @@ class Game {
       ease: "back.out"
     });
 
-    requestAnimationFrame(this.gameLoop);
-    this.drawGrid();
+    // Add touch controls with passive listeners
+    const addTouchControls = () => {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!touchStartX || !touchStartY) return;
+
+        const touchEndX = e.touches[0].clientX;
+        const touchEndY = e.touches[0].clientY;
+
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+
+        // Determine swipe direction
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          // Horizontal swipe
+          if (deltaX > 0 && this.snake.direction !== 'left') {
+            this.snake.newDirection = 'right';
+          } else if (deltaX < 0 && this.snake.direction !== 'right') {
+            this.snake.newDirection = 'left';
+          }
+        } else {
+          // Vertical swipe
+          if (deltaY > 0 && this.snake.direction !== 'up') {
+            this.snake.newDirection = 'down';
+          } else if (deltaY < 0 && this.snake.direction !== 'down') {
+            this.snake.newDirection = 'up';
+          }
+        }
+
+        touchStartX = touchEndX;
+        touchStartY = touchEndY;
+      }, { passive: true });
+
+      document.addEventListener('touchend', () => {
+        touchStartX = 0;
+        touchStartY = 0;
+      }, { passive: true });
+    };
+
+    // Initialize touch controls
+    addTouchControls();
+
+    // Start the game loop
+    this.gameLoop();
   }
 
   drawGrid() {
