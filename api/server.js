@@ -25,9 +25,19 @@ async function connectToDatabase(uri) {
 }
 
 module.exports = async (req, res) => {
-  // Настройка CORS
+  // Обновленная настройка CORS
+  const allowedOrigins = [
+    'https://game-zmeika.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:9000'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -45,8 +55,8 @@ module.exports = async (req, res) => {
     const collection = db.collection('leaderboard');
 
     // Обработка heartbeat
-    if (req.url.endsWith('/heartbeat')) {
-      const { username, timestamp } = req.body;
+    if (req.url === '/api/heartbeat') {
+      const { username } = req.body || {};
       if (username) {
         activePlayers.set(username, Date.now());
       }
@@ -54,8 +64,8 @@ module.exports = async (req, res) => {
     }
 
     // Обработка выхода игрока
-    if (req.url.endsWith('/leave')) {
-      const { username } = req.body;
+    if (req.url === '/api/leave') {
+      const { username } = req.body || {};
       if (username) {
         activePlayers.delete(username);
       }
@@ -69,13 +79,13 @@ module.exports = async (req, res) => {
         .limit(100)
         .toArray();
       
-      res.json({
+      return res.json({
         scores: leaderboard,
         activePlayers: activePlayers.size
       });
     } 
     else if (req.method === 'POST') {
-      const { username, score } = req.body;
+      const { username, score } = req.body || {};
       
       if (!username || typeof score !== 'number') {
         return res.status(400).json({ error: 'Invalid data' });
@@ -116,7 +126,7 @@ module.exports = async (req, res) => {
       // Определяем ранг игрока
       const rank = leaderboard.findIndex(entry => entry.username === username) + 1;
       
-      res.json({ 
+      return res.json({ 
         rank, 
         leaderboard,
         activePlayers: activePlayers.size

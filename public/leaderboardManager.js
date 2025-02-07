@@ -3,11 +3,11 @@ class LeaderboardManager {
     this.leaderboard = [];
     this.currentPlayer = null;
     this.maxEntries = 100;
-    // API URL теперь всегда будет относительным
-    this.apiUrl = '/api/server';
+    this.apiUrl = '/api';
     this.activePlayers = 0;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
+    this.retryDelay = 5000; // 5 секунд между повторными попытками
   }
 
   async loadLeaderboard() {
@@ -18,6 +18,7 @@ class LeaderboardManager {
       this.leaderboard = data.scores;
       this.activePlayers = data.activePlayers;
       this.updateActivePlayersDisplay();
+      return true;
     } catch (error) {
       console.error('Error loading leaderboard:', error);
       // Используем локальное хранилище как резервный вариант
@@ -25,6 +26,9 @@ class LeaderboardManager {
       if (stored) {
         this.leaderboard = JSON.parse(stored);
       }
+      // Планируем повторную попытку
+      setTimeout(() => this.loadLeaderboard(), this.retryDelay);
+      return false;
     }
   }
 
@@ -42,34 +46,20 @@ class LeaderboardManager {
       
       const data = await response.json();
       this.leaderboard = data.leaderboard;
+      this.activePlayers = data.activePlayers;
       
-      // Сохраняем локально как резервную копию
       localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
       
       return data.rank;
     } catch (error) {
       console.error('Error saving score:', error);
-      // Если сервер недоступен, сохраняем локально
       return this.addLocalScore(username, score);
     }
   }
 
-  startHeartbeat() {
-    // Отправляем первый heartbeat
-    this.sendHeartbeat();
-
-    // Устанавливаем интервал для heartbeat
-    this.heartbeatInterval = setInterval(() => {
-      this.sendHeartbeat();
-    }, 30000); // каждые 30 секунд
-
-    // Очищаем интервал при закрытии страницы
-    window.addEventListener('beforeunload', () => {
-      this.stopHeartbeat();
-    });
-  }
-
   async sendHeartbeat() {
+    if (!this.currentPlayer) return;
+
     try {
       const response = await fetch(`${this.apiUrl}/heartbeat`, {
         method: 'POST',
@@ -78,18 +68,48 @@ class LeaderboardManager {
         },
         body: JSON.stringify({ 
           username: this.currentPlayer,
-          timestamp: new Date().toISOString()
+          timestamp: Date.now()
         })
       });
 
       if (!response.ok) throw new Error('Failed to send heartbeat');
       
       const data = await response.json();
-      this.activePlayers = data.activePlayers;
-      this.updateActivePlayersDisplay();
+      if (data.activePlayers !== this.activePlayers) {
+        this.activePlayers = data.activePlayers;
+        this.updateActivePlayersDisplay();
+      }
     } catch (error) {
       console.error('Error sending heartbeat:', error);
+      clearInterval(this.heartbeatInterval);
+      setTimeout(() => this.startHeartbeat(), this.retryDelay);
     }
+  }
+
+  startHeartbeat() {
+    if (!this.currentPlayer) return;
+
+    // Отправляем первый heartbeat немедленно
+    this.sendHeartbeat();
+
+    // Устанавливаем интервал для регулярных heartbeat
+    this.heartbeatInterval = setInterval(() => {
+      this.sendHeartbeat();
+    }, 15000); // Уменьшаем интервал до 15 секунд
+
+    // Добавляем обработчик для видимости страницы
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.stopHeartbeat();
+      } else {
+        this.startHeartbeat();
+      }
+    });
+
+    // Очищаем интервал при закрытии страницы
+    window.addEventListener('beforeunload', () => {
+      this.stopHeartbeat();
+    });
   }
 
   stopHeartbeat() {
@@ -98,20 +118,29 @@ class LeaderboardManager {
       this.heartbeatInterval = null;
     }
 
-    // Отправляем уведомление о выходе
-    fetch(`${this.apiUrl}/leave`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username: this.currentPlayer })
-    }).catch(console.error);
+    if (this.currentPlayer) {
+      fetch(`${this.apiUrl}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: this.currentPlayer })
+      }).catch(console.error);
+    }
   }
 
   updateActivePlayersDisplay() {
-    const activePlayersElement = document.getElementById('activePlayers');
-    if (activePlayersElement) {
-      activePlayersElement.textContent = this.activePlayers;
+    const counter = document.getElementById('activePlayersCounter');
+    if (counter) {
+      const oldValue = parseInt(counter.textContent);
+      counter.textContent = this.activePlayers;
+      
+      // Добавляем анимацию при изменении значения
+      if (oldValue !== this.activePlayers) {
+        counter.classList.remove('changed');
+        void counter.offsetWidth; // Форсируем reflow
+        counter.classList.add('changed');
+      }
     }
   }
 

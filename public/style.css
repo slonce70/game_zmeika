@@ -289,15 +289,29 @@ button:hover {
   }
 }
 
-/* Адаптивность */
+/* Обновленные стили для адаптивности */
 @media (max-width: 1024px) {
   .game-wrapper {
     flex-direction: column;
     align-items: center;
+    padding: 10px;
+  }
+
+  .game-container {
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
   }
 
   .top-players-sidebar {
     width: 100%;
+    max-width: 600px;
+    margin-top: 20px;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: auto !important;
     max-width: 600px;
   }
 }
@@ -308,11 +322,132 @@ button:hover {
   }
 
   h1 {
-    font-size: 1.5em;
+    font-size: 1.2em;
   }
 
   .score-container {
+    font-size: 0.9em;
+  }
+
+  .game-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal {
+    width: 90%;
+    max-width: 400px;
+    padding: 15px;
+  }
+
+  .leaderboard {
+    font-size: 0.9em;
+  }
+
+  .leaderboard td, .leaderboard th {
+    padding: 6px;
+  }
+
+  .player-card {
+    padding: 8px;
+  }
+
+  .controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .control-info p {
+    font-size: 0.8em;
+  }
+
+  .restart-btn, .leaderboard-btn {
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+  }
+
+  .canvas-container {
+    margin-bottom: 10px;
+  }
+
+  .mobile-controls {
+    margin-top: 15px;
+  }
+
+  .control-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-container {
+    padding: 5px;
+  }
+
+  h1 {
     font-size: 1em;
+  }
+
+  .score-container {
+    font-size: 0.8em;
+  }
+
+  .players-online {
+    font-size: 0.7em;
+  }
+
+  .modal {
+    width: 95%;
+    padding: 10px;
+  }
+
+  .leaderboard td, .leaderboard th {
+    padding: 4px;
+    font-size: 0.8em;
+  }
+
+  .player-card {
+    padding: 6px;
+  }
+
+  .player-name {
+    font-size: 0.7em;
+  }
+
+  .player-score {
+    font-size: 0.8em;
+  }
+
+  .player-date {
+    font-size: 0.6em;
+  }
+
+  .control-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  .mobile-controls-row {
+    gap: 15px;
+  }
+}
+
+/* Добавляем стили для touch-устройств */
+@media (hover: none) {
+  .player-card:hover {
+    transform: none;
+  }
+
+  .restart-btn:hover, .leaderboard-btn:hover {
+    transform: none;
+  }
+
+  .button:active {
+    transform: scale(0.95);
   }
 }
 
@@ -361,4 +496,49 @@ button:hover {
 
 .players-count.changed {
   animation: countChange 0.3s ease-out;
+}
+
+/* Мобильное управление */
+.mobile-controls {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.mobile-controls-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.control-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: var(--text-color);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+  background-color: #60d888;
+}
+
+/* Показываем мобильное управление только на touch-устройствах */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-controls {
+    display: flex;
+  }
 } 

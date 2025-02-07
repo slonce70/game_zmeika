@@ -116,6 +116,23 @@ class Game {
       ease: "back.out"
     });
 
+    // Добавляем обработчики для мобильного управления
+    const mobileControls = document.querySelector('.mobile-controls');
+    if (mobileControls) {
+      const buttons = mobileControls.querySelectorAll('.control-btn');
+      buttons.forEach(button => {
+        ['touchstart', 'mousedown'].forEach(eventType => {
+          button.addEventListener(eventType, (e) => {
+            e.preventDefault();
+            const direction = button.dataset.direction;
+            if (direction) {
+              this.handleMobileControl(direction);
+            }
+          });
+        });
+      });
+    }
+
     requestAnimationFrame(this.gameLoop);
     this.drawGrid();
   }
@@ -219,6 +236,21 @@ class Game {
     
     if (directions[this.snake.direction] && directions[this.snake.direction].includes(key)) {
       this.snake.newDirection = key;
+    }
+  }
+
+  handleMobileControl(direction) {
+    if (this.isPaused) return;
+
+    const directions = {
+      right: ['up', 'down'],
+      left: ['up', 'down'],
+      up: ['left', 'right'],
+      down: ['left', 'right']
+    };
+    
+    if (directions[this.snake.direction] && directions[this.snake.direction].includes(direction)) {
+      this.snake.newDirection = direction;
     }
   }
 
