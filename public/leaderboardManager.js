@@ -18,14 +18,22 @@ export class LeaderboardManager {
         const data = snapshot.val() || {};
         console.log('Received leaderboard data:', data);
         
-        this.leaderboard = Object.values(data)
-          .filter(entry => entry && entry.username && entry.score > 0) // Фильтруем нулевые значения
-          .sort((a, b) => (b.score || 0) - (a.score || 0))
+        // Фильтруем и сортируем данные один раз
+        const filteredData = Object.values(data)
+          .filter(entry => entry && entry.username && entry.score > 0)
+          .sort((a, b) => b.score - a.score)
           .slice(0, this.maxEntries);
-        
-        console.log('Processed leaderboard:', this.leaderboard);
-        this.updateLeaderboardDisplay();
-        localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
+
+        // Проверяем, действительно ли данные изменились
+        const currentDataString = JSON.stringify(this.leaderboard);
+        const newDataString = JSON.stringify(filteredData);
+
+        if (currentDataString !== newDataString) {
+          console.log('Leaderboard data changed, updating display');
+          this.leaderboard = filteredData;
+          this.updateLeaderboardDisplay();
+          localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
+        }
       } catch (error) {
         console.error('Error processing leaderboard data:', error);
       }

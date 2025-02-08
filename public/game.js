@@ -62,8 +62,8 @@ class Game {
     const leaderboardBody = document.getElementById('leaderboardBody');
     leaderboardBody.innerHTML = '';
 
-    await new Promise(resolve => setTimeout(resolve, 500));
     const scores = this.leaderboardManager.leaderboard;
+    if (!Array.isArray(scores)) return;
 
     scores.forEach((score, index) => {
       const row = document.createElement('tr');
@@ -74,7 +74,7 @@ class Game {
       row.innerHTML = `
         <td>${index + 1}</td>
         <td>${this.escapeHtml(score.username)}</td>
-        <td>${score.score}</td>
+        <td>${score.score || 0}</td>
         <td>${this.leaderboardManager.formatDate(score.date)}</td>
       `;
       leaderboardBody.appendChild(row);
@@ -315,47 +315,45 @@ class Game {
   updateSidebarLeaderboard() {
     const sidebarLeaderboard = document.getElementById('sidebarLeaderboard');
     const topPlayers = this.leaderboardManager.leaderboard;
+    
+    if (!sidebarLeaderboard || !Array.isArray(topPlayers)) return;
+    
     sidebarLeaderboard.innerHTML = '';
+    
+    // Обновляем счетчик активных игроков
     const activePlayersCounter = document.getElementById('activePlayersCounter');
     if (activePlayersCounter) {
       activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
     }
+
+    // Создаем единый стиль отображения
     topPlayers.forEach((player, index) => {
       if (!player || !player.username) return;
       
-      const playerCard = document.createElement('div');
-      playerCard.className = 'player-card';
+      const entry = document.createElement('div');
+      entry.className = 'leaderboard-entry';
       if (player.username === this.leaderboardManager.currentPlayer) {
-        playerCard.classList.add('current-player');
+        entry.classList.add('current-player');
       }
-      playerCard.innerHTML = `
-        <div class="player-rank">#${index + 1}</div>
-        <div class="player-info">
-          <div class="player-name">${this.escapeHtml(player.username)}</div>
-          <div class="player-score">${player.score || 0}</div>
-          <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
-        </div>
+
+      entry.innerHTML = `
+        <span class="rank">#${index + 1}</span>
+        <span class="username">${this.escapeHtml(player.username)}</span>
+        <span class="score">${player.score || 0}</span>
+        <span class="date">${this.leaderboardManager.formatDate(player.date)}</span>
       `;
-      const previousScore = this.previousScores?.get(player.username);
-      if (previousScore && previousScore !== player.score) {
-        gsap.from(playerCard, {
-          backgroundColor: 'rgba(80, 200, 120, 0.4)',
-          duration: 1,
-          ease: 'power2.out'
-        });
-      }
-      sidebarLeaderboard.appendChild(playerCard);
+
+      sidebarLeaderboard.appendChild(entry);
     });
-    this.previousScores = new Map(
-      topPlayers.filter(player => player && player.username)
-        .map(player => [player.username, player.score])
-    );
   }
 
   startLeaderboardUpdates() {
-    setInterval(async () => {
-      this.updateSidebarLeaderboard();
-    }, 10000);
+    // Уменьшаем частоту обновлений для предотвращения мерцания
+    setInterval(() => {
+      if (!this.isPaused) {
+        this.updateSidebarLeaderboard();
+      }
+    }, 30000); // Обновляем каждые 30 секунд вместо 10
   }
 }
 
