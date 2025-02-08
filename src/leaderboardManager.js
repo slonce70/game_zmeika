@@ -51,7 +51,7 @@ class LeaderboardManager {
       const currentData = snapshot.val();
 
       if (!currentData || score > currentData.score) {
-        await playerRef.set({
+        await playerRef.update({
           username,
           score,
           date: new Date().toISOString()

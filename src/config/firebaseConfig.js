@@ -10,11 +10,21 @@ const firebaseConfig = {
     storageBucket: 'game-zmeika.firebasestorage.app',
     messagingSenderId: '501669425656',
     appId: '1:501669425656:web:95fd75d725d3519b76a60d',
-    measurementId: 'G-92RT9TCGW0'
+    measurementId: 'G-92RT9TCGW0',
+    vapidKey: null,
+    requireConsent: true
 };
 
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getDatabase(app);
+
+if (Notification && Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+            Notification.permission = 'denied';
+        }
+    });
+}
 
 export { db }; 
