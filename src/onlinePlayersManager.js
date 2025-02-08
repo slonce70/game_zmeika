@@ -105,13 +105,8 @@ export class OnlinePlayersManager {
             const playerElement = document.createElement('div');
             playerElement.className = `online-player${player.username === this.currentPlayer ? ' current' : ''}`;
 
-            let statusClass = '';
-            if (player.username === this.currentPlayer && typeof window.currentGameStatus !== 'undefined') {
-                statusClass = window.currentGameStatus === 'playing' ? '' : ' idle';
-            } else {
-                statusClass = player.isPlaying ? '' : ' idle';
-            }
-
+            const statusClass = player.isPlaying ? '' : ' idle';
+            
             playerElement.innerHTML = `
                 <div class="player-status${statusClass}"></div>
                 <div class="player-name">${this.escapeHtml(player.username)}</div>
@@ -157,10 +152,12 @@ export class OnlinePlayersManager {
      * @param {boolean} isPlaying - The playing status of the player.
      */
     updatePlayerStatus(username, isPlaying) {
+        if (!username) return;
+        
         const userRef = ref(db, `online/${username}`);
         set(userRef, {
             lastActive: serverTimestamp(),
-            isPlaying
+            isPlaying: isPlaying
         });
     }
 

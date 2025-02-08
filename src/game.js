@@ -1,6 +1,8 @@
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
+    this.onlinePlayersManager = new OnlinePlayersManager();
+    
     this.leaderboardManager.loadLeaderboard().then(() => {
       this.updateSidebarLeaderboard();
     });
@@ -94,8 +96,8 @@ class Game {
     this.food = new Food(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.scoreManager = new ScoreManager();
 
-    // Устанавливаем глобальный статус игры как 'playing' для отображения зеленого статуса
-    window.currentGameStatus = 'playing';
+    // Устанавливаем статус игрока как играющий
+    this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
 
     // Привязываем функции
     this.gameLoop = this.gameLoop.bind(this);
@@ -107,7 +109,7 @@ class Game {
     document.querySelector('.restart-btn').addEventListener('click', this.handleRestart);
 
     this.lastTime = 0;
-    this.interval = 200; // интервал обновления в миллисекундах
+    this.interval = 200;
     this.accumulator = 0;
 
     // Анимация появления игры
@@ -223,6 +225,8 @@ class Game {
   handleInput(e) {
     if (e.key === ' ') {
       this.isPaused = !this.isPaused;
+      // Обновляем статус при паузе/возобновлении
+      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, !this.isPaused);
       if (!this.isPaused) requestAnimationFrame(this.gameLoop);
       return;
     }
@@ -257,25 +261,15 @@ class Game {
   }
 
   async gameOver() {
-    // Устанавливаем глобальный статус игры как 'idle' для отображения желтого статуса
-    window.currentGameStatus = 'idle';
     this.isPaused = true;
-    if(this.leaderboardManager && this.leaderboardManager.markPlayerOffline) {
-        this.leaderboardManager.markPlayerOffline();
-    }
+    // Устанавливаем статус как не играющий
+    this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
   }
 
   handleRestart() {
-    // Перед перезапуском обновляем глобальный статус игры как 'playing'
-    window.currentGameStatus = 'playing';
-    if(this.leaderboardManager && this.leaderboardManager.markPlayerOnline) {
-        this.leaderboardManager.markPlayerOnline(this.leaderboardManager.currentPlayer);
-    }
-    if(this.resetGame) {
-        this.resetGame();
-    } else {
-        location.reload();
-    }
+    // Устанавливаем статус как играющий перед рестартом
+    this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
+    location.reload();
   }
 
   // Вспомогательная функция для безопасного отображения HTML
