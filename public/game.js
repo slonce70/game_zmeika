@@ -304,7 +304,9 @@ class Game {
   }
 
   escapeHtml(unsafe) {
+    if (!unsafe) return '';
     return unsafe
+      .toString()
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -321,6 +323,8 @@ class Game {
       activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
     }
     topPlayers.forEach((player, index) => {
+      if (!player || !player.username) return;
+      
       const playerCard = document.createElement('div');
       playerCard.className = 'player-card';
       if (player.username === this.leaderboardManager.currentPlayer) {
@@ -330,7 +334,7 @@ class Game {
         <div class="player-rank">#${index + 1}</div>
         <div class="player-info">
           <div class="player-name">${this.escapeHtml(player.username)}</div>
-          <div class="player-score">${player.score}</div>
+          <div class="player-score">${player.score || 0}</div>
           <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
         </div>
       `;
@@ -345,7 +349,8 @@ class Game {
       sidebarLeaderboard.appendChild(playerCard);
     });
     this.previousScores = new Map(
-      topPlayers.map(player => [player.username, player.score])
+      topPlayers.filter(player => player && player.username)
+        .map(player => [player.username, player.score])
     );
   }
 
