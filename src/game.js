@@ -1,3 +1,5 @@
+import './style.css';
+
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
