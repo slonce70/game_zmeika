@@ -57,11 +57,9 @@ class LeaderboardManager {
           date: new Date().toISOString()
         });
       }
-
-      return this.getPlayerRank(username);
     } catch (error) {
       console.error('Error saving score:', error);
-      return this.addLocalScore(username, score);
+      this.addLocalScore(username, score);
     }
   }
 
@@ -165,23 +163,11 @@ class LeaderboardManager {
 
     localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
     this.updateLeaderboardDisplay();
-    return this.getPlayerRank(username);
-  }
-
-  isHighScore(score) {
-    const playerCurrentScore = this.getPlayerScore(this.currentPlayer);
-    return this.leaderboard.length < this.maxEntries || 
-           score > this.leaderboard[this.leaderboard.length - 1].score ||
-           (playerCurrentScore && score > playerCurrentScore);
   }
 
   getPlayerScore(username) {
     const playerEntry = this.leaderboard.find(entry => entry.username === username);
     return playerEntry ? playerEntry.score : null;
-  }
-
-  getPlayerRank(username) {
-    return this.leaderboard.findIndex(entry => entry.username === username) + 1;
   }
 
   cleanup() {
@@ -207,7 +193,6 @@ class LeaderboardManager {
   markPlayerOffline() {
     if (this.currentPlayer) {
       const userRef = this.onlineRef.child(this.currentPlayer);
-      // Set player's status to not playing; here we store an object with lastActive and isPlaying flag
       userRef.set({ lastActive: firebase.database.ServerValue.TIMESTAMP, isPlaying: false });
     }
   }
