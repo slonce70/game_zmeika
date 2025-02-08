@@ -42,9 +42,7 @@ export class LeaderboardManager {
   }
 
   async saveScore(username, score) {
-    if (!username || typeof score !== 'number') {
-      throw new Error('Invalid score data');
-    }
+    if (!username || typeof score !== 'number') return;
 
     try {
       const playerRef = ref(db, 'leaderboard/' + username);
@@ -58,11 +56,10 @@ export class LeaderboardManager {
           date: new Date().toISOString()
         });
       }
-      
       return this.getPlayerRank(username);
     } catch (error) {
       console.error('Error saving score:', error);
-      return this.addLocalScore(username, score);
+      return null;
     }
   }
 
@@ -88,16 +85,7 @@ export class LeaderboardManager {
   updateActivePlayersDisplay() {
     const counter = document.getElementById('activePlayersCounter');
     if (counter) {
-      const oldValue = parseInt(counter.textContent) || 0;
-      const newValue = this.activePlayers || 0;
-      
-      counter.textContent = newValue;
-      
-      if (oldValue !== newValue) {
-        counter.classList.remove('changed');
-        void counter.offsetWidth;
-        counter.classList.add('changed');
-      }
+      counter.textContent = this.activePlayers || 0;
     }
   }
 
@@ -137,35 +125,6 @@ export class LeaderboardManager {
     return `${date.toLocaleDateString('ru-RU')}, ${time}`;
   }
 
-  addLocalScore(username, score) {
-    const existingPlayerIndex = this.leaderboard.findIndex(entry => entry.username === username);
-    
-    if (existingPlayerIndex !== -1) {
-      if (score > this.leaderboard[existingPlayerIndex].score) {
-        this.leaderboard[existingPlayerIndex] = {
-          username,
-          score,
-          date: new Date().toISOString()
-        };
-      }
-    } else {
-      this.leaderboard.push({
-        username,
-        score,
-        date: new Date().toISOString()
-      });
-    }
-
-    this.leaderboard.sort((a, b) => b.score - a.score);
-    if (this.leaderboard.length > this.maxEntries) {
-      this.leaderboard = this.leaderboard.slice(0, this.maxEntries);
-    }
-
-    localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
-    this.updateLeaderboardDisplay();
-    return this.getPlayerRank(username);
-  }
-
   isHighScore(score) {
     const playerCurrentScore = this.getPlayerScore(this.currentPlayer);
     return this.leaderboard.length < this.maxEntries || 
@@ -187,6 +146,5 @@ export class LeaderboardManager {
       const userRef = ref(db, 'online/' + this.currentPlayer);
       set(userRef, null);
     }
-    // Off functions not needed with modular API in this simple case
   }
 } 
