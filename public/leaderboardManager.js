@@ -1,5 +1,5 @@
 import { db } from "./firebaseConfig.js";
-import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "firebase/database";
+import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
 
 export class LeaderboardManager {
   constructor() {
