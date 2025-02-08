@@ -254,65 +254,38 @@ class Game {
   }
 
   async gameOver() {
+    // Останавливаем игровой цикл и обновляем статус игрока как не играющего
     this.isPaused = true;
-    
-    // Анимация game over
-    gsap.to(this.canvas, {
-      duration: 0.5,
-      opacity: 0.5,
-      scale: 0.95,
-      ease: "power2.out"
-    });
-
-    // Проверяем, попал ли результат в таблицу лидеров
-    if (this.leaderboardManager.isHighScore(this.scoreManager.score)) {
-      try {
-        const rank = await this.leaderboardManager.saveScore(
-          this.leaderboardManager.currentPlayer,
-          this.scoreManager.score
-        );
-        
-        // Обновляем боковую панель сразу после сохранения нового результата
-        this.updateSidebarLeaderboard();
-        
-        setTimeout(() => {
-          alert(`New High Score! Rank: ${rank}\nScore: ${this.scoreManager.score}`);
-          this.showLeaderboard();
-          this.handleRestart();
-        }, 500);
-      } catch (error) {
-        console.error('Failed to save score:', error);
-        setTimeout(() => {
-          alert('Game Over! Your score: ' + this.scoreManager.score);
-          this.handleRestart();
-        }, 500);
-      }
-    } else {
-      setTimeout(() => {
-        alert('Game Over! Your score: ' + this.scoreManager.score);
-        this.handleRestart();
-      }, 500);
+    if(this.leaderboardManager && this.leaderboardManager.markPlayerOffline) {
+        this.leaderboardManager.markPlayerOffline();
     }
+
+    const currentScore = this.scoreManager.score;
+    const personalRecord = this.leaderboardManager.getPersonalRecord
+        ? this.leaderboardManager.getPersonalRecord()
+        : 0;
+
+    if(currentScore > personalRecord) {
+        // Если побит личный рекорд, показываем модальное окно нового рекорда
+        const newRecordModal = document.getElementById('newRecordModal');
+        if(newRecordModal) {
+            newRecordModal.style.display = 'flex';
+        }
+    }
+    // Иначе не показываем окно, игра будет перезапущена кнопкой 'Restart'
   }
 
   handleRestart() {
-    this.snake.reset();
-    this.scoreManager.reset();
-    this.food.respawn(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
-    this.interval = 200;
-    this.isPaused = false;
-    
-    // Анимация перезапуска
-    gsap.to(this.canvas, {
-      duration: 0.5,
-      opacity: 1,
-      scale: 1,
-      ease: "power2.out"
-    });
-    
-    document.querySelector('.score-value').textContent = '0';
-    document.getElementById('leaderboardModal').style.display = 'none';
-    requestAnimationFrame(this.gameLoop);
+    // Перед перезапуском обновляем статус игрока как играющий
+    if(this.leaderboardManager && this.leaderboardManager.markPlayerOnline) {
+        this.leaderboardManager.markPlayerOnline(this.leaderboardManager.currentPlayer);
+    }
+    // Перезапускаем игру. Если определен метод resetGame, вызываем его; иначе, перезагружаем страницу
+    if(this.resetGame) {
+        this.resetGame();
+    } else {
+        location.reload();
+    }
   }
 
   // Вспомогательная функция для безопасного отображения HTML

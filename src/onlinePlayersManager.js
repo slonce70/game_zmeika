@@ -103,10 +103,17 @@ export class OnlinePlayersManager {
         // Создаем элементы для каждого игрока
         sortedPlayers.forEach((player) => {
             const playerElement = document.createElement('div');
-            playerElement.className = `online-player${player.isPlaying ? ' playing' : ''}${player.username === this.currentPlayer ? ' current' : ''}`;
+            playerElement.className = `online-player${player.username === this.currentPlayer ? ' current' : ''}`;
+
+            let statusClass = '';
+            if (player.username === this.currentPlayer && typeof window.currentGameStatus !== 'undefined') {
+                statusClass = window.currentGameStatus === 'playing' ? '' : ' idle';
+            } else {
+                statusClass = player.isPlaying ? '' : ' idle';
+            }
 
             playerElement.innerHTML = `
-                <div class="player-status${player.isPlaying ? '' : ' idle'}"></div>
+                <div class="player-status${statusClass}"></div>
                 <div class="player-name">${this.escapeHtml(player.username)}</div>
             `;
 
