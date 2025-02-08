@@ -135,10 +135,10 @@ export class LeaderboardManager {
     }
 
     try {
-      console.log('Updating leaderboard display with:', this.leaderboard); // Добавляем логирование
+      console.log('Updating leaderboard display with:', this.leaderboard);
       
       if (!Array.isArray(this.leaderboard) || this.leaderboard.length === 0) {
-        sidebarLeaderboard.innerHTML = '<div class="leaderboard-entry">Нет результатов</div>';
+        sidebarLeaderboard.innerHTML = '<div class="player-card">Нет результатов</div>';
         return;
       }
 
@@ -146,19 +146,21 @@ export class LeaderboardManager {
         .map((entry, index) => {
           if (!entry || !entry.username) return '';
           return `
-            <div class="leaderboard-entry ${entry.username === this.currentPlayer ? 'current-player' : ''}">
-              <span class="rank">#${index + 1}</span>
-              <span class="username">${this.escapeHtml(entry.username)}</span>
-              <span class="score">${entry.score || 0}</span>
-              <span class="date">${this.formatDate(entry.date || new Date())}</span>
+            <div class="player-card ${entry.username === this.currentPlayer ? 'current-player' : ''}">
+              <div class="player-rank">#${index + 1}</div>
+              <div class="player-info">
+                <div class="player-name">${this.escapeHtml(entry.username)}</div>
+                <div class="player-score">${entry.score || 0}</div>
+                <div class="player-date">${this.formatDate(entry.date || new Date())}</div>
+              </div>
             </div>
           `;
         })
-        .filter(html => html) // Удаляем пустые строки
+        .filter(html => html)
         .join('');
     } catch (error) {
       console.error('Error updating leaderboard display:', error);
-      sidebarLeaderboard.innerHTML = '<div class="leaderboard-entry">Ошибка загрузки</div>';
+      sidebarLeaderboard.innerHTML = '<div class="player-card">Ошибка загрузки</div>';
     }
   }
 

@@ -326,34 +326,50 @@ class Game {
       activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
     }
 
-    // Создаем единый стиль отображения
+    // Возвращаем стиль с карточками игроков
     topPlayers.forEach((player, index) => {
       if (!player || !player.username) return;
       
-      const entry = document.createElement('div');
-      entry.className = 'leaderboard-entry';
+      const playerCard = document.createElement('div');
+      playerCard.className = 'player-card';
       if (player.username === this.leaderboardManager.currentPlayer) {
-        entry.classList.add('current-player');
+        playerCard.classList.add('current-player');
       }
 
-      entry.innerHTML = `
-        <span class="rank">#${index + 1}</span>
-        <span class="username">${this.escapeHtml(player.username)}</span>
-        <span class="score">${player.score || 0}</span>
-        <span class="date">${this.leaderboardManager.formatDate(player.date)}</span>
+      playerCard.innerHTML = `
+        <div class="player-rank">#${index + 1}</div>
+        <div class="player-info">
+          <div class="player-name">${this.escapeHtml(player.username)}</div>
+          <div class="player-score">${player.score || 0}</div>
+          <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
+        </div>
       `;
 
-      sidebarLeaderboard.appendChild(entry);
+      // Добавляем анимацию при изменении счета
+      const previousScore = this.previousScores?.get(player.username);
+      if (previousScore && previousScore !== player.score) {
+        gsap.from(playerCard, {
+          backgroundColor: 'rgba(80, 200, 120, 0.4)',
+          duration: 1,
+          ease: 'power2.out'
+        });
+      }
+
+      sidebarLeaderboard.appendChild(playerCard);
     });
+
+    // Сохраняем текущие счета для сравнения
+    this.previousScores = new Map(
+      topPlayers.filter(player => player && player.username)
+        .map(player => [player.username, player.score])
+    );
   }
 
   startLeaderboardUpdates() {
-    // Уменьшаем частоту обновлений для предотвращения мерцания
+    // Возвращаем прежний интервал обновления
     setInterval(() => {
-      if (!this.isPaused) {
-        this.updateSidebarLeaderboard();
-      }
-    }, 30000); // Обновляем каждые 30 секунд вместо 10
+      this.updateSidebarLeaderboard();
+    }, 10000);
   }
 }
 
