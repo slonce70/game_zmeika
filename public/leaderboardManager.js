@@ -16,8 +16,8 @@ export class LeaderboardManager {
     onValue(this.leaderboardRef, (snapshot) => {
       const data = snapshot.val() || {};
       this.leaderboard = Object.values(data)
-        .filter(entry => entry && entry.username && entry.score && entry.date)
-        .sort((a, b) => b.score - a.score)
+        .filter(entry => entry && entry.username)
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
         .slice(0, this.maxEntries);
       this.updateLeaderboardDisplay();
       localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
@@ -95,36 +95,43 @@ export class LeaderboardManager {
     if (!sidebarLeaderboard) return;
 
     sidebarLeaderboard.innerHTML = this.leaderboard
-      .filter(entry => entry && entry.username && entry.score)
       .map((entry, index) => `
         <div class="leaderboard-entry ${entry.username === this.currentPlayer ? 'current-player' : ''}">
           <span class="rank">#${index + 1}</span>
           <span class="username">${this.escapeHtml(entry.username)}</span>
           <span class="score">${entry.score || 0}</span>
-          <span class="date">${entry.date ? this.formatDate(entry.date) : 'Invalid Date'}</span>
+          <span class="date">${this.formatDate(entry.date || new Date())}</span>
         </div>
       `)
       .join('');
   }
 
   formatDate(dateString) {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Недавно';
+      }
+      
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
 
-    const time = date.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+      const time = date.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-    if (date.toDateString() === today.toDateString()) {
-      return `Сегодня, ${time}`;
+      if (date.toDateString() === today.toDateString()) {
+        return `Сегодня, ${time}`;
+      }
+      if (date.toDateString() === yesterday.toDateString()) {
+        return `Вчера, ${time}`;
+      }
+      return `${date.toLocaleDateString('ru-RU')}, ${time}`;
+    } catch (e) {
+      return 'Недавно';
     }
-    if (date.toDateString() === yesterday.toDateString()) {
-      return `Вчера, ${time}`;
-    }
-    return `${date.toLocaleDateString('ru-RU')}, ${time}`;
   }
 
   escapeHtml(unsafe) {
