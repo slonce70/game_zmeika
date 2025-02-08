@@ -1,10 +1,3 @@
-import './style.css';
-import Snake from './snake.js';
-import Food from './food.js';
-import ScoreManager from './scoreManager.js';
-import LeaderboardManager from './leaderboardManager.js';
-import { gsap } from 'gsap';
-
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
@@ -12,67 +5,14 @@ class Game {
       this.updateSidebarLeaderboard();
     });
     
-    this.boundGameLoop = this.gameLoop.bind(this);
-    this.boundHandleInput = this.handleInput.bind(this);
-    this.boundHandleRestart = this.handleRestart.bind(this);
-    this.boundHandleVisibilityChange = this.handleVisibilityChange.bind(this);
-    
-    // Initialize game state
-    this.isPaused = false;
-    this.isGameOver = false;
-    this.updateInterval = null;
-    
-    // Initialize modals
+    // Инициализация модальных окон
     this.initializeModals();
+    
+    // Показываем окно логина
     this.showLoginModal();
+
+    // Запускаем периодическое обновление таблицы лидеров
     this.startLeaderboardUpdates();
-
-    // Add visibility change handler
-    document.addEventListener('visibilitychange', this.boundHandleVisibilityChange);
-  }
-
-  handleVisibilityChange() {
-    if (document.hidden) {
-      this.pause();
-    } else if (!this.isGameOver) {
-      this.resume();
-    }
-  }
-
-  pause() {
-    this.isPaused = true;
-  }
-
-  resume() {
-    if (!this.isGameOver) {
-      this.isPaused = false;
-      requestAnimationFrame(this.boundGameLoop);
-    }
-  }
-
-  cleanup() {
-    // Stop game loop
-    this.isPaused = true;
-    this.isGameOver = true;
-
-    // Remove event listeners
-    document.removeEventListener('keydown', this.boundHandleInput);
-    document.removeEventListener('visibilitychange', this.boundHandleVisibilityChange);
-    document.querySelector('.restart-btn')?.removeEventListener('click', this.boundHandleRestart);
-
-    // Clean up intervals
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
-
-    // Clean up leaderboard manager
-    this.leaderboardManager.cleanup();
-
-    // Remove canvas if it exists
-    if (this.canvas && this.canvas.parentNode) {
-      this.canvas.parentNode.removeChild(this.canvas);
-    }
   }
 
   initializeModals() {
@@ -83,6 +23,7 @@ class Game {
       const username = document.getElementById('username').value.trim();
       if (username) {
         this.leaderboardManager.currentPlayer = username;
+        this.leaderboardManager.markPlayerOnline(username);
         document.getElementById('loginModal').style.display = 'none';
         this.initializeGame();
       }
@@ -116,7 +57,6 @@ class Game {
     const leaderboardBody = document.getElementById('leaderboardBody');
     leaderboardBody.innerHTML = '';
 
-    // Обновляем данные с сервера перед показом
     await this.leaderboardManager.loadLeaderboard();
     const scores = this.leaderboardManager.getTopScores();
 
@@ -130,7 +70,7 @@ class Game {
         <td>${index + 1}</td>
         <td>${this.escapeHtml(score.username)}</td>
         <td>${score.score}</td>
-        <td>${new Date(score.date).toLocaleDateString()}</td>
+        <td>${this.leaderboardManager.formatDate(score.date)}</td>
       `;
       leaderboardBody.appendChild(row);
     });
@@ -139,41 +79,35 @@ class Game {
   }
 
   initializeGame() {
-    // Create canvas
+    // Создаем canvas и устанавливаем его размеры
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
-    
-    // Set canvas size based on viewport
-    const container = document.querySelector('.canvas-container');
-    const maxWidth = Math.min(600, container.clientWidth - 20);
-    const maxHeight = Math.min(400, window.innerHeight - 200);
-    
-    this.canvas.width = maxWidth;
-    this.canvas.height = maxHeight;
-    container.appendChild(this.canvas);
+    this.canvas.width = 600;
+    this.canvas.height = 400;
+    document.querySelector('.canvas-container').appendChild(this.canvas);
 
-    this.gridSize = Math.floor(Math.min(this.canvas.width, this.canvas.height) / 20);
+    this.gridSize = 20;
     this.isPaused = false;
-    this.isGameOver = false;
     
-    // Create game objects
+    // Создаем объекты игры
     this.snake = new Snake();
     this.food = new Food(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.scoreManager = new ScoreManager();
 
-    // Add event listeners
-    document.addEventListener('keydown', this.boundHandleInput);
-    document.querySelector('.restart-btn').addEventListener('click', this.boundHandleRestart);
+    // Привязываем функции
+    this.gameLoop = this.gameLoop.bind(this);
+    this.handleInput = this.handleInput.bind(this);
+    this.handleRestart = this.handleRestart.bind(this);
+    
+    // Добавляем обработчики событий
+    document.addEventListener('keydown', this.handleInput);
+    document.querySelector('.restart-btn').addEventListener('click', this.handleRestart);
 
-    // Initialize touch controls
-    this.initializeTouchControls();
-
-    // Start game loop
     this.lastTime = 0;
-    this.interval = 200;
+    this.interval = 200; // интервал обновления в миллисекундах
     this.accumulator = 0;
 
-    // Animate game start
+    // Анимация появления игры
     gsap.from(this.canvas, {
       duration: 0.5,
       opacity: 0,
@@ -181,76 +115,25 @@ class Game {
       ease: "back.out"
     });
 
-    requestAnimationFrame(this.boundGameLoop);
-  }
+    // Добавляем обработчики для мобильного управления
+    const mobileControls = document.querySelector('.mobile-controls');
+    if (mobileControls) {
+      const buttons = mobileControls.querySelectorAll('.control-btn');
+      buttons.forEach(button => {
+        ['touchstart', 'mousedown'].forEach(eventType => {
+          button.addEventListener(eventType, (e) => {
+            e.preventDefault();
+            const direction = button.dataset.direction;
+            if (direction) {
+              this.handleMobileControl(direction);
+            }
+          });
+        });
+      });
+    }
 
-  initializeTouchControls() {
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let minSwipeDistance = 30;
-    let touchStartTime = 0;
-    let maxSwipeTime = 300;
-
-    const handleTouchStart = (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
-    };
-
-    const handleTouchMove = (e) => {
-      if (!touchStartX || !touchStartY) return;
-
-      const touchEndX = e.touches[0].clientX;
-      const touchEndY = e.touches[0].clientY;
-      const touchEndTime = Date.now();
-
-      // Ignore if swipe took too long
-      if (touchEndTime - touchStartTime > maxSwipeTime) {
-        touchStartX = touchEndX;
-        touchStartY = touchEndY;
-        touchStartTime = touchEndTime;
-        return;
-      }
-
-      const deltaX = touchEndX - touchStartX;
-      const deltaY = touchEndY - touchStartY;
-
-      // Only handle if swipe distance is sufficient
-      if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
-        return;
-      }
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
-        if (deltaX > 0 && this.snake.direction !== 'left') {
-          this.snake.newDirection = 'right';
-        } else if (deltaX < 0 && this.snake.direction !== 'right') {
-          this.snake.newDirection = 'left';
-        }
-      } else {
-        // Vertical swipe
-        if (deltaY > 0 && this.snake.direction !== 'up') {
-          this.snake.newDirection = 'down';
-        } else if (deltaY < 0 && this.snake.direction !== 'down') {
-          this.snake.newDirection = 'up';
-        }
-      }
-
-      // Reset touch start position
-      touchStartX = touchEndX;
-      touchStartY = touchEndY;
-      touchStartTime = touchEndTime;
-    };
-
-    const handleTouchEnd = () => {
-      touchStartX = 0;
-      touchStartY = 0;
-    };
-
-    // Add touch event listeners with passive option
-    this.canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
-    this.canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
-    this.canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+    requestAnimationFrame(this.gameLoop);
+    this.drawGrid();
   }
 
   drawGrid() {
@@ -355,6 +238,21 @@ class Game {
     }
   }
 
+  handleMobileControl(direction) {
+    if (this.isPaused) return;
+
+    const directions = {
+      right: ['up', 'down'],
+      left: ['up', 'down'],
+      up: ['left', 'right'],
+      down: ['left', 'right']
+    };
+    
+    if (directions[this.snake.direction] && directions[this.snake.direction].includes(direction)) {
+      this.snake.newDirection = direction;
+    }
+  }
+
   async gameOver() {
     this.isPaused = true;
     
@@ -434,6 +332,12 @@ class Game {
     
     sidebarLeaderboard.innerHTML = '';
     
+    // Обновляем счетчик активных игроков
+    const activePlayersCounter = document.getElementById('activePlayersCounter');
+    if (activePlayersCounter) {
+      activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
+    }
+    
     topPlayers.forEach((player, index) => {
       const playerCard = document.createElement('div');
       playerCard.className = 'player-card';
@@ -446,10 +350,10 @@ class Game {
         <div class="player-info">
           <div class="player-name">${this.escapeHtml(player.username)}</div>
           <div class="player-score">${player.score}</div>
+          <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
         </div>
       `;
 
-      // Добавляем анимацию при обновлении счета
       const previousScore = this.previousScores?.get(player.username);
       if (previousScore && previousScore !== player.score) {
         gsap.from(playerCard, {
@@ -462,7 +366,6 @@ class Game {
       sidebarLeaderboard.appendChild(playerCard);
     });
 
-    // Сохраняем текущие счета для следующего сравнения
     this.previousScores = new Map(
       topPlayers.map(player => [player.username, player.score])
     );
@@ -479,6 +382,4 @@ class Game {
 
 window.onload = () => {
   new Game();
-};
-
-export default Game; 
+}; 

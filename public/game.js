@@ -1,9 +1,14 @@
+import { LeaderboardManager } from "./leaderboardManager.js";
+import { ScoreManager } from "./scoreManager.js";
+import { Snake } from "./snake.js";
+import { Food } from "./food.js";
+
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
-    this.leaderboardManager.loadLeaderboard().then(() => {
+    setTimeout(() => {
       this.updateSidebarLeaderboard();
-    });
+    }, 2000);
     
     // Инициализация модальных окон
     this.initializeModals();
@@ -23,10 +28,9 @@ class Game {
       const username = document.getElementById('username').value.trim();
       if (username) {
         this.leaderboardManager.currentPlayer = username;
+        this.leaderboardManager.markPlayerOnline(username);
         document.getElementById('loginModal').style.display = 'none';
         this.initializeGame();
-        // Запускаем отслеживание активности
-        this.leaderboardManager.startHeartbeat();
       }
     });
 
@@ -58,8 +62,8 @@ class Game {
     const leaderboardBody = document.getElementById('leaderboardBody');
     leaderboardBody.innerHTML = '';
 
-    await this.leaderboardManager.loadLeaderboard();
-    const scores = this.leaderboardManager.getTopScores();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const scores = this.leaderboardManager.leaderboard;
 
     scores.forEach((score, index) => {
       const row = document.createElement('tr');
@@ -188,7 +192,7 @@ class Game {
       const scoreElement = document.querySelector('.score-value');
       scoreElement.textContent = this.scoreManager.score;
       scoreElement.classList.remove('score-update');
-      void scoreElement.offsetWidth; // Trigger reflow
+      void scoreElement.offsetWidth;
       scoreElement.classList.add('score-update');
       
       // Уменьшаем интервал (увеличиваем скорость)
@@ -205,16 +209,9 @@ class Game {
   }
 
   draw() {
-    // Очищаем canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Рисуем сетку
     this.drawGrid();
-    
-    // Рисуем еду
     this.food.draw(this.ctx, this.gridSize);
-    
-    // Рисуем змейку
     this.snake.draw(this.ctx, this.gridSize);
   }
 
@@ -224,8 +221,7 @@ class Game {
       if (!this.isPaused) requestAnimationFrame(this.gameLoop);
       return;
     }
-
-    // Обрабатываем нажатия клавиш Arrow
+    
     const key = e.key.replace('Arrow', '').toLowerCase();
     const directions = {
       right: ['up', 'down'],
@@ -256,8 +252,6 @@ class Game {
 
   async gameOver() {
     this.isPaused = true;
-    
-    // Анимация game over
     gsap.to(this.canvas, {
       duration: 0.5,
       opacity: 0.5,
@@ -265,17 +259,13 @@ class Game {
       ease: "power2.out"
     });
 
-    // Проверяем, попал ли результат в таблицу лидеров
     if (this.leaderboardManager.isHighScore(this.scoreManager.score)) {
       try {
         const rank = await this.leaderboardManager.saveScore(
           this.leaderboardManager.currentPlayer,
           this.scoreManager.score
         );
-        
-        // Обновляем боковую панель сразу после сохранения нового результата
         this.updateSidebarLeaderboard();
-        
         setTimeout(() => {
           alert(`New High Score! Rank: ${rank}\nScore: ${this.scoreManager.score}`);
           this.showLeaderboard();
@@ -302,21 +292,17 @@ class Game {
     this.food.respawn(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.interval = 200;
     this.isPaused = false;
-    
-    // Анимация перезапуска
     gsap.to(this.canvas, {
       duration: 0.5,
       opacity: 1,
       scale: 1,
       ease: "power2.out"
     });
-    
     document.querySelector('.score-value').textContent = '0';
     document.getElementById('leaderboardModal').style.display = 'none';
     requestAnimationFrame(this.gameLoop);
   }
 
-  // Вспомогательная функция для безопасного отображения HTML
   escapeHtml(unsafe) {
     return unsafe
       .replace(/&/g, "&amp;")
@@ -326,26 +312,20 @@ class Game {
       .replace(/'/g, "&#039;");
   }
 
-  // Добавляем новый метод для обновления боковой панели
   updateSidebarLeaderboard() {
     const sidebarLeaderboard = document.getElementById('sidebarLeaderboard');
-    const topPlayers = this.leaderboardManager.getTopScores(10);
-    
+    const topPlayers = this.leaderboardManager.leaderboard;
     sidebarLeaderboard.innerHTML = '';
-    
-    // Обновляем счетчик активных игроков
     const activePlayersCounter = document.getElementById('activePlayersCounter');
     if (activePlayersCounter) {
       activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
     }
-    
     topPlayers.forEach((player, index) => {
       const playerCard = document.createElement('div');
       playerCard.className = 'player-card';
       if (player.username === this.leaderboardManager.currentPlayer) {
         playerCard.classList.add('current-player');
       }
-
       playerCard.innerHTML = `
         <div class="player-rank">#${index + 1}</div>
         <div class="player-info">
@@ -354,7 +334,6 @@ class Game {
           <div class="player-date">${this.leaderboardManager.formatDate(player.date)}</div>
         </div>
       `;
-
       const previousScore = this.previousScores?.get(player.username);
       if (previousScore && previousScore !== player.score) {
         gsap.from(playerCard, {
@@ -363,21 +342,17 @@ class Game {
           ease: 'power2.out'
         });
       }
-
       sidebarLeaderboard.appendChild(playerCard);
     });
-
     this.previousScores = new Map(
       topPlayers.map(player => [player.username, player.score])
     );
   }
 
-  // Метод для запуска периодического обновления таблицы лидеров
   startLeaderboardUpdates() {
     setInterval(async () => {
-      await this.leaderboardManager.loadLeaderboard();
       this.updateSidebarLeaderboard();
-    }, 10000); // Обновляем каждые 10 секунд
+    }, 10000);
   }
 }
 

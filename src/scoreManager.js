@@ -16,6 +16,4 @@ class ScoreManager {
     ctx.font = '20px Arial';
     ctx.fillText('Score: ' + this.score, 10, 20);
   }
-}
-
-export default ScoreManager; 
+} 

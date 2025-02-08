@@ -78,6 +78,4 @@ class Food {
 
     this.animationFrame++;
   }
-}
-
-export default Food; 
+} 

@@ -106,6 +106,4 @@ class Snake {
     this.newDirection = 'right';
     this.pendingGrowth = 0;
   }
-}
-
-export default Snake; 
+} 
