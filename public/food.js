@@ -1,4 +1,4 @@
-class Food {
+export class Food {
   constructor(gridSize, canvasSize) {
     this.position = { x: 0, y: 0 };
     this.animationFrame = 0;

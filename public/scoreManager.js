@@ -1,4 +1,4 @@
-class ScoreManager {
+export class ScoreManager {
   constructor() {
     this.score = 0;
   }

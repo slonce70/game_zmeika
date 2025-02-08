@@ -1,6 +1,12 @@
-class Snake {
+export class Snake {
   constructor() {
-    this.body = [{ x: 10, y: 10 }];
+    this.reset();
+  }
+
+  reset() {
+    this.body = [
+      { x: 10, y: 10 }
+    ];
     this.direction = 'right';
     this.newDirection = 'right';
     this.pendingGrowth = 0;
@@ -98,12 +104,5 @@ class Snake {
   checkSelfCollision() {
     const [head, ...body] = this.body;
     return body.some(segment => segment.x === head.x && segment.y === head.y);
-  }
-
-  reset() {
-    this.body = [{ x: 10, y: 10 }];
-    this.direction = 'right';
-    this.newDirection = 'right';
-    this.pendingGrowth = 0;
   }
 } 
