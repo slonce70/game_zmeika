@@ -3,9 +3,12 @@ class LeaderboardManager {
     this.leaderboard = [];
     this.currentPlayer = null;
     this.maxEntries = 100;
-    this.apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
-      ? `http://${window.location.hostname}:3000/api` 
-      : '/api';
+    this.leaderboardUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+      ? `http://${window.location.hostname}:3000/api/leaderboard` 
+      : '/api/leaderboard';
+    this.heartbeatUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+      ? `http://${window.location.hostname}:3000/api/heartbeat` 
+      : '/api/heartbeat';
     this.activePlayers = 0;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
@@ -67,7 +70,7 @@ class LeaderboardManager {
 
   async loadLeaderboard() {
     try {
-      const data = await this.fetchWithRetry(this.apiUrl);
+      const data = await this.fetchWithRetry(this.leaderboardUrl);
       if (Array.isArray(data.scores)) {
         this.leaderboard = data.scores;
         
@@ -98,7 +101,7 @@ class LeaderboardManager {
     }
 
     try {
-      const data = await this.fetchWithRetry(this.apiUrl, {
+      const data = await this.fetchWithRetry(this.leaderboardUrl, {
         method: 'POST',
         body: JSON.stringify({ username, score })
       });
@@ -123,7 +126,7 @@ class LeaderboardManager {
     if (!this.currentPlayer) return;
 
     try {
-      const data = await this.fetchWithRetry(`${this.apiUrl}/heartbeat`, {
+      const data = await this.fetchWithRetry(this.heartbeatUrl, {
         method: 'POST',
         body: JSON.stringify({ 
           username: this.currentPlayer,
@@ -188,7 +191,7 @@ class LeaderboardManager {
     window.removeEventListener('beforeunload', this.unloadHandler);
 
     if (this.currentPlayer) {
-      fetch(`${this.apiUrl}/leave`, {
+      fetch(`${this.leaderboardUrl}/leave`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: this.currentPlayer })
