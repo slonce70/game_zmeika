@@ -39,11 +39,15 @@ class Game {
     leaderboardBtn.addEventListener('click', () => {
       this.showLeaderboard();
       this.isPaused = true;
+      // Обновляем статус на паузе
+      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
     });
 
     closeLeaderboardBtn.addEventListener('click', () => {
       leaderboardModal.style.display = 'none';
       this.isPaused = false;
+      // Обновляем статус при возобновлении игры
+      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
       requestAnimationFrame(this.gameLoop);
     });
   }
@@ -78,6 +82,8 @@ class Game {
     });
 
     leaderboardModal.style.display = 'flex';
+    // Обновляем статус при показе таблицы лидеров
+    this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
   }
 
   initializeGame() {
