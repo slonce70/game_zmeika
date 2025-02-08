@@ -8,7 +8,8 @@ module.exports = {
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist'),
-    clean: true
+    clean: true,
+    publicPath: '/'
   },
   devServer: {
     static: {
@@ -21,6 +22,16 @@ module.exports = {
   },
   module: {
     rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
+      },
       {
         test: /\.css$/,
         use: [
@@ -53,7 +64,8 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
-      filename: 'index.html'
+      filename: 'index.html',
+      inject: true
     }),
     new CopyWebpackPlugin({
       patterns: [
@@ -69,7 +81,10 @@ module.exports = {
     })
   ],
   resolve: {
-    extensions: ['.js', '.css']
+    extensions: ['.js', '.css'],
+    alias: {
+      gsap: path.resolve(__dirname, 'node_modules/gsap/dist/gsap.js')
+    }
   },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development'
 }; 
