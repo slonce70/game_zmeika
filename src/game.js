@@ -2,6 +2,7 @@ class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
     this.onlinePlayersManager = new OnlinePlayersManager();
+    this.isPlaying = false; // Добавляем флаг активной игры
     
     this.leaderboardManager.loadLeaderboard().then(() => {
       this.updateSidebarLeaderboard();
@@ -37,18 +38,22 @@ class Game {
     const leaderboardModal = document.getElementById('leaderboardModal');
 
     leaderboardBtn.addEventListener('click', () => {
+      const wasPlaying = !this.isPaused && this.isPlaying;
       this.showLeaderboard();
       this.isPaused = true;
-      // Обновляем статус на паузе
       this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
+      // Сохраняем состояние игры
+      this._previousGameState = wasPlaying;
     });
 
     closeLeaderboardBtn.addEventListener('click', () => {
       leaderboardModal.style.display = 'none';
       this.isPaused = false;
-      // Обновляем статус при возобновлении игры
-      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
-      requestAnimationFrame(this.gameLoop);
+      // Восстанавливаем предыдущее состояние
+      if (this._previousGameState && this.isPlaying) {
+        this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
+        requestAnimationFrame(this.gameLoop);
+      }
     });
   }
 
@@ -96,6 +101,7 @@ class Game {
 
     this.gridSize = 20;
     this.isPaused = false;
+    this.isPlaying = true; // Устанавливаем флаг активной игры
     
     // Создаем объекты игры
     this.snake = new Snake();
@@ -231,9 +237,12 @@ class Game {
   handleInput(e) {
     if (e.key === ' ') {
       this.isPaused = !this.isPaused;
-      // Обновляем статус при паузе/возобновлении
-      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, !this.isPaused);
-      if (!this.isPaused) requestAnimationFrame(this.gameLoop);
+      if (!this.isPaused && this.isPlaying) {
+        this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
+        requestAnimationFrame(this.gameLoop);
+      } else {
+        this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
+      }
       return;
     }
 
@@ -268,11 +277,13 @@ class Game {
 
   async gameOver() {
     this.isPaused = true;
+    this.isPlaying = false; // Игра закончена
     // Устанавливаем статус как не играющий
     this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
   }
 
   handleRestart() {
+    this.isPlaying = true; // Начинаем новую игру
     // Устанавливаем статус как играющий перед рестартом
     this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
     location.reload();
