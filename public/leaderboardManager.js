@@ -16,6 +16,7 @@ export class LeaderboardManager {
     onValue(this.leaderboardRef, (snapshot) => {
       const data = snapshot.val() || {};
       this.leaderboard = Object.values(data)
+        .filter(entry => entry && entry.username && entry.score && entry.date)
         .sort((a, b) => b.score - a.score)
         .slice(0, this.maxEntries);
       this.updateLeaderboardDisplay();
@@ -94,12 +95,13 @@ export class LeaderboardManager {
     if (!sidebarLeaderboard) return;
 
     sidebarLeaderboard.innerHTML = this.leaderboard
+      .filter(entry => entry && entry.username && entry.score)
       .map((entry, index) => `
         <div class="leaderboard-entry ${entry.username === this.currentPlayer ? 'current-player' : ''}">
           <span class="rank">#${index + 1}</span>
-          <span class="username">${entry.username}</span>
-          <span class="score">${entry.score}</span>
-          <span class="date">${this.formatDate(entry.date)}</span>
+          <span class="username">${this.escapeHtml(entry.username)}</span>
+          <span class="score">${entry.score || 0}</span>
+          <span class="date">${entry.date ? this.formatDate(entry.date) : 'Invalid Date'}</span>
         </div>
       `)
       .join('');
@@ -123,6 +125,17 @@ export class LeaderboardManager {
       return `Вчера, ${time}`;
     }
     return `${date.toLocaleDateString('ru-RU')}, ${time}`;
+  }
+
+  escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   isHighScore(score) {
