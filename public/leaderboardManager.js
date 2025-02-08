@@ -12,15 +12,25 @@ export class LeaderboardManager {
     this.leaderboardRef = ref(db, 'leaderboard');
     this.onlineRef = ref(db, 'online');
     
-    // Subscribe to leaderboard changes
+    // Subscribe to leaderboard changes with error handling
     onValue(this.leaderboardRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      this.leaderboard = Object.values(data)
-        .filter(entry => entry && entry.username)
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, this.maxEntries);
-      this.updateLeaderboardDisplay();
-      localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
+      try {
+        const data = snapshot.val() || {};
+        console.log('Received leaderboard data:', data); // Добавляем логирование
+        
+        this.leaderboard = Object.values(data)
+          .filter(entry => entry && entry.username)
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, this.maxEntries);
+        
+        console.log('Processed leaderboard:', this.leaderboard); // Добавляем логирование
+        this.updateLeaderboardDisplay();
+        localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
+      } catch (error) {
+        console.error('Error processing leaderboard data:', error);
+      }
+    }, (error) => {
+      console.error('Error in leaderboard subscription:', error);
     });
     
     // Subscribe to online players count
@@ -50,13 +60,26 @@ export class LeaderboardManager {
       const snapshot = await get(playerRef);
       const currentData = snapshot.val();
 
-      if (!currentData || score > currentData.score) {
-        await set(playerRef, {
-          username,
-          score,
-          date: new Date().toISOString()
-        });
-      }
+      // Всегда сохраняем новый результат с текущей датой
+      const newScore = {
+        username,
+        score,
+        date: new Date().toISOString(),
+        lastActive: serverTimestamp()
+      };
+
+      await set(playerRef, newScore);
+      console.log('Score saved:', newScore); // Добавляем логирование
+      
+      // Обновляем локальный лидерборд
+      const leaderboardSnapshot = await get(this.leaderboardRef);
+      const leaderboardData = leaderboardSnapshot.val() || {};
+      this.leaderboard = Object.values(leaderboardData)
+        .filter(entry => entry && entry.username)
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, this.maxEntries);
+      
+      this.updateLeaderboardDisplay();
       return this.getPlayerRank(username);
     } catch (error) {
       console.error('Error saving score:', error);
@@ -92,18 +115,37 @@ export class LeaderboardManager {
 
   updateLeaderboardDisplay() {
     const sidebarLeaderboard = document.getElementById('sidebarLeaderboard');
-    if (!sidebarLeaderboard) return;
+    if (!sidebarLeaderboard) {
+      console.error('Sidebar leaderboard element not found');
+      return;
+    }
 
-    sidebarLeaderboard.innerHTML = this.leaderboard
-      .map((entry, index) => `
-        <div class="leaderboard-entry ${entry.username === this.currentPlayer ? 'current-player' : ''}">
-          <span class="rank">#${index + 1}</span>
-          <span class="username">${this.escapeHtml(entry.username)}</span>
-          <span class="score">${entry.score || 0}</span>
-          <span class="date">${this.formatDate(entry.date || new Date())}</span>
-        </div>
-      `)
-      .join('');
+    try {
+      console.log('Updating leaderboard display with:', this.leaderboard); // Добавляем логирование
+      
+      if (!Array.isArray(this.leaderboard) || this.leaderboard.length === 0) {
+        sidebarLeaderboard.innerHTML = '<div class="leaderboard-entry">Нет результатов</div>';
+        return;
+      }
+
+      sidebarLeaderboard.innerHTML = this.leaderboard
+        .map((entry, index) => {
+          if (!entry || !entry.username) return '';
+          return `
+            <div class="leaderboard-entry ${entry.username === this.currentPlayer ? 'current-player' : ''}">
+              <span class="rank">#${index + 1}</span>
+              <span class="username">${this.escapeHtml(entry.username)}</span>
+              <span class="score">${entry.score || 0}</span>
+              <span class="date">${this.formatDate(entry.date || new Date())}</span>
+            </div>
+          `;
+        })
+        .filter(html => html) // Удаляем пустые строки
+        .join('');
+    } catch (error) {
+      console.error('Error updating leaderboard display:', error);
+      sidebarLeaderboard.innerHTML = '<div class="leaderboard-entry">Ошибка загрузки</div>';
+    }
   }
 
   formatDate(dateString) {
