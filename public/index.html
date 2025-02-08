@@ -9,6 +9,21 @@
 </head>
 <body>
     <div class="game-wrapper">
+        <!-- Добавляем сайдбар для онлайн игроков -->
+        <div class="online-players-sidebar" id="onlinePlayersSidebar">
+            <div class="online-header">
+                <h3>Online Players</h3>
+                <button class="toggle-sidebar" id="toggleSidebar">←</button>
+            </div>
+            <div class="online-list" id="onlinePlayersList">
+                <!-- Динамический контент -->
+            </div>
+            <!-- Мобильная иконка -->
+            <div class="mobile-indicator" id="mobileOnlineIndicator">
+                <span class="player-count">0</span>
+            </div>
+        </div>
+
         <!-- Основной контейнер игры -->
         <div class="game-container">
             <div class="game-header">

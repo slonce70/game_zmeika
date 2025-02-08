@@ -27,7 +27,7 @@ body {
 .game-wrapper {
   display: flex;
   gap: 20px;
-  align-items: flex-start;
+  position: relative;
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
@@ -380,6 +380,32 @@ button:hover {
     height: 50px;
     font-size: 20px;
   }
+
+  .game-wrapper {
+    flex-direction: column;
+  }
+
+  .online-players-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 1000;
+    background: rgba(42, 42, 42, 0.95);
+  }
+
+  .online-players-sidebar.visible {
+    transform: translateX(0);
+  }
+
+  .mobile-indicator {
+    display: flex;
+  }
+
+  .game-container {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -411,6 +437,28 @@ button:hover {
 
   .player-card {
     padding: 6px;
+  }
+
+  .player-name {
+    font-size: 0.7em;
+  }
+
+  .player-score {
+    font-size: 0.8em;
+  }
+
+  .player-date {
+    font-size: 0.6em;
+  }
+
+  .control-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  .player-card {
+    padding: 8px;
   }
 
   .player-name {
@@ -541,4 +589,136 @@ button:hover {
   .mobile-controls {
     display: flex;
   }
+}
+
+/* Стили для сайдбара онлайн игроков */
+.online-players-sidebar {
+  width: 200px;
+  background: rgba(42, 42, 42, 0.9);
+  border-radius: 10px;
+  padding: 15px;
+  color: #fff;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.online-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.online-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+  color: #50c878;
+}
+
+.toggle-sidebar {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 5px;
+  transition: transform 0.3s;
+}
+
+.toggle-sidebar.collapsed {
+  transform: rotate(180deg);
+}
+
+.online-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.online-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.online-player.playing {
+  background: rgba(80, 200, 120, 0.1);
+}
+
+.online-player.current {
+  border: 1px solid #50c878;
+}
+
+.player-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #50c878;
+}
+
+.player-status.idle {
+  background: #ffd700;
+}
+
+.mobile-indicator {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #50c878;
+  padding: 10px;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.player-count {
+  color: white;
+  font-weight: bold;
+}
+
+/* Медиа-запросы для адаптивности */
+@media (max-width: 768px) {
+  .game-wrapper {
+    flex-direction: column;
+  }
+
+  .online-players-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 1000;
+    background: rgba(42, 42, 42, 0.95);
+  }
+
+  .online-players-sidebar.visible {
+    transform: translateX(0);
+  }
+
+  .mobile-indicator {
+    display: flex;
+  }
+
+  .game-container {
+    width: 100%;
+  }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.online-player {
+  animation: fadeIn 0.3s ease;
 } 

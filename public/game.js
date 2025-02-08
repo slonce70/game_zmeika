@@ -2,10 +2,13 @@ import { LeaderboardManager } from "./leaderboardManager.js";
 import { ScoreManager } from "./scoreManager.js";
 import { Snake } from "./snake.js";
 import { Food } from "./food.js";
+import { OnlinePlayersManager } from "./onlinePlayersManager.js";
 
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
+    this.onlinePlayersManager = new OnlinePlayersManager();
+    
     setTimeout(() => {
       this.updateSidebarLeaderboard();
     }, 2000);
@@ -18,6 +21,11 @@ class Game {
 
     // Запускаем периодическое обновление таблицы лидеров
     this.startLeaderboardUpdates();
+
+    // Добавляем обработчик перед закрытием страницы
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
   }
 
   initializeModals() {
@@ -29,6 +37,8 @@ class Game {
       if (username) {
         this.leaderboardManager.currentPlayer = username;
         this.leaderboardManager.markPlayerOnline(username);
+        this.onlinePlayersManager.setCurrentPlayer(username);
+        this.onlinePlayersManager.updatePlayerStatus(username, true);
         document.getElementById('loginModal').style.display = 'none';
         this.initializeGame();
       }
@@ -252,6 +262,11 @@ class Game {
 
   async gameOver() {
     this.isPaused = true;
+    // Обновляем статус игрока
+    if (this.leaderboardManager.currentPlayer) {
+      this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
+    }
+
     gsap.to(this.canvas, {
       duration: 0.5,
       opacity: 0.5,
@@ -370,6 +385,11 @@ class Game {
     setInterval(() => {
       this.updateSidebarLeaderboard();
     }, 10000);
+  }
+
+  cleanup() {
+    this.leaderboardManager.cleanup();
+    this.onlinePlayersManager.cleanup();
   }
 }
 
