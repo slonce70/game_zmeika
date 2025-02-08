@@ -94,6 +94,9 @@ class Game {
     this.food = new Food(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.scoreManager = new ScoreManager();
 
+    // Устанавливаем глобальный статус игры как 'playing' для отображения зеленого статуса
+    window.currentGameStatus = 'playing';
+
     // Привязываем функции
     this.gameLoop = this.gameLoop.bind(this);
     this.handleInput = this.handleInput.bind(this);
@@ -254,33 +257,20 @@ class Game {
   }
 
   async gameOver() {
-    // Останавливаем игровой цикл и обновляем статус игрока как не играющего
+    // Устанавливаем глобальный статус игры как 'idle' для отображения желтого статуса
+    window.currentGameStatus = 'idle';
     this.isPaused = true;
     if(this.leaderboardManager && this.leaderboardManager.markPlayerOffline) {
         this.leaderboardManager.markPlayerOffline();
     }
-
-    const currentScore = this.scoreManager.score;
-    const personalRecord = this.leaderboardManager.getPersonalRecord
-        ? this.leaderboardManager.getPersonalRecord()
-        : 0;
-
-    if(currentScore > personalRecord) {
-        // Если побит личный рекорд, показываем модальное окно нового рекорда
-        const newRecordModal = document.getElementById('newRecordModal');
-        if(newRecordModal) {
-            newRecordModal.style.display = 'flex';
-        }
-    }
-    // Иначе не показываем окно, игра будет перезапущена кнопкой 'Restart'
   }
 
   handleRestart() {
-    // Перед перезапуском обновляем статус игрока как играющий
+    // Перед перезапуском обновляем глобальный статус игры как 'playing'
+    window.currentGameStatus = 'playing';
     if(this.leaderboardManager && this.leaderboardManager.markPlayerOnline) {
         this.leaderboardManager.markPlayerOnline(this.leaderboardManager.currentPlayer);
     }
-    // Перезапускаем игру. Если определен метод resetGame, вызываем его; иначе, перезагружаем страницу
     if(this.resetGame) {
         this.resetGame();
     } else {

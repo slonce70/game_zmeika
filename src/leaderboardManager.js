@@ -71,8 +71,11 @@ class LeaderboardManager {
     this.currentPlayer = username;
     const userRef = this.onlineRef.child(username);
     
-    // Mark player as online
-    userRef.set(true);
+    // Mark player as online with an object containing isPlaying and lastActive
+    userRef.set({
+      lastActive: firebase.database.ServerValue.TIMESTAMP,
+      isPlaying: true
+    });
     
     // Remove from online list when disconnected
     userRef.onDisconnect().remove();
