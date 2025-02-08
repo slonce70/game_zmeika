@@ -27,6 +27,9 @@ export class OnlinePlayersManager {
         this.initializeUI();
         this.setupEventListeners();
         this.startOnlinePlayersSubscription();
+        
+        // Запускаем периодическую очистку неактивных пользователей
+        this.startInactivePlayersCleanup();
     }
 
     /**
@@ -184,5 +187,30 @@ export class OnlinePlayersManager {
             const userRef = ref(db, `online/${this.currentPlayer}`);
             set(userRef, null);
         }
+    }
+
+    /**
+     * Запускает периодическую очистку неактивных пользователей
+     */
+    startInactivePlayersCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            const inactiveTimeout = 5 * 60 * 1000; // 5 минут
+
+            // Получаем список всех пользователей
+            get(this.onlineRef).then((snapshot) => {
+                const data = snapshot.val() || {};
+                
+                Object.entries(data).forEach(([username, status]) => {
+                    // Проверяем время последней активности
+                    const lastActive = status.lastActive;
+                    if (now - lastActive > inactiveTimeout) {
+                        // Удаляем неактивного пользователя
+                        const userRef = ref(db, `online/${username}`);
+                        set(userRef, null);
+                    }
+                });
+            });
+        }, 60000); // Проверяем каждую минуту
     }
 } 

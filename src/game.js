@@ -277,14 +277,22 @@ class Game {
 
   async gameOver() {
     this.isPaused = true;
-    this.isPlaying = false; // Игра закончена
-    // Устанавливаем статус как не играющий
+    this.isPlaying = false;
+    
+    // Сохраняем счет без показа модального окна
+    if (this.scoreManager && this.leaderboardManager) {
+      await this.leaderboardManager.saveScore(
+        this.leaderboardManager.currentPlayer,
+        this.scoreManager.score
+      );
+    }
+    
+    // Обновляем статус как не играющий
     this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, false);
   }
 
   handleRestart() {
-    this.isPlaying = true; // Начинаем новую игру
-    // Устанавливаем статус как играющий перед рестартом
+    this.isPlaying = true;
     this.onlinePlayersManager.updatePlayerStatus(this.leaderboardManager.currentPlayer, true);
     location.reload();
   }
