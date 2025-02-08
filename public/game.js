@@ -259,30 +259,28 @@ class Game {
       ease: "power2.out"
     });
 
-    if (this.leaderboardManager.isHighScore(this.scoreManager.score)) {
+    // Проверяем, есть ли смысл сохранять результат
+    if (this.scoreManager.score > 0 && this.leaderboardManager.isHighScore(this.scoreManager.score)) {
       try {
         const rank = await this.leaderboardManager.saveScore(
           this.leaderboardManager.currentPlayer,
           this.scoreManager.score
         );
-        this.updateSidebarLeaderboard();
-        setTimeout(() => {
-          alert(`New High Score! Rank: ${rank}\nScore: ${this.scoreManager.score}`);
-          this.showLeaderboard();
+        if (rank) {
+          setTimeout(() => {
+            alert(`New High Score! Rank: ${rank}\nScore: ${this.scoreManager.score}`);
+            this.handleRestart();
+          }, 500);
+        } else {
           this.handleRestart();
-        }, 500);
+        }
       } catch (error) {
         console.error('Failed to save score:', error);
-        setTimeout(() => {
-          alert('Game Over! Your score: ' + this.scoreManager.score);
-          this.handleRestart();
-        }, 500);
+        this.handleRestart();
       }
     } else {
-      setTimeout(() => {
-        alert('Game Over! Your score: ' + this.scoreManager.score);
-        this.handleRestart();
-      }, 500);
+      // Просто перезапускаем игру без сообщений
+      this.handleRestart();
     }
   }
 
