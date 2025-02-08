@@ -594,12 +594,15 @@ button:hover {
 /* Стили для сайдбара онлайн игроков */
 .online-players-sidebar {
   width: 200px;
-  background: rgba(42, 42, 42, 0.9);
+  background: rgba(42, 42, 42, 0.95);
   border-radius: 10px;
   padding: 15px;
   color: #fff;
-  transition: transform 0.3s ease;
+  position: relative;
   flex-shrink: 0;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .online-header {
@@ -635,6 +638,8 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
+  will-change: contents;
 }
 
 .online-player {
@@ -644,7 +649,9 @@ button:hover {
   padding: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 5px;
-  transition: background-color 0.3s;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .online-player.playing {
@@ -660,10 +667,19 @@ button:hover {
   height: 8px;
   border-radius: 50%;
   background: #50c878;
+  flex-shrink: 0;
 }
 
 .player-status.idle {
   background: #ffd700;
+}
+
+.player-name {
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
 }
 
 .mobile-indicator {
@@ -695,9 +711,9 @@ button:hover {
     left: 0;
     top: 0;
     height: 100%;
-    transform: translateX(-100%);
     z-index: 1000;
-    background: rgba(42, 42, 42, 0.95);
+    border-radius: 0 10px 10px 0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
   }
 
   .online-players-sidebar.visible {
