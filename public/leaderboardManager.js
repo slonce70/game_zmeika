@@ -16,14 +16,14 @@ export class LeaderboardManager {
     onValue(this.leaderboardRef, (snapshot) => {
       try {
         const data = snapshot.val() || {};
-        console.log('Received leaderboard data:', data); // Добавляем логирование
+        console.log('Received leaderboard data:', data);
         
         this.leaderboard = Object.values(data)
-          .filter(entry => entry && entry.username)
+          .filter(entry => entry && entry.username && entry.score > 0) // Фильтруем нулевые значения
           .sort((a, b) => (b.score || 0) - (a.score || 0))
           .slice(0, this.maxEntries);
         
-        console.log('Processed leaderboard:', this.leaderboard); // Добавляем логирование
+        console.log('Processed leaderboard:', this.leaderboard);
         this.updateLeaderboardDisplay();
         localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
       } catch (error) {
@@ -53,14 +53,20 @@ export class LeaderboardManager {
   }
 
   async saveScore(username, score) {
-    if (!username || typeof score !== 'number') return;
+    if (!username || typeof score !== 'number' || score <= 0) return; // Не сохраняем нулевые и отрицательные значения
 
     try {
       const playerRef = ref(db, 'leaderboard/' + username);
       const snapshot = await get(playerRef);
       const currentData = snapshot.val();
 
-      // Всегда сохраняем новый результат с текущей датой
+      // Проверяем, есть ли уже лучший результат
+      if (currentData && currentData.score >= score) {
+        console.log('Current score is not better than existing:', currentData.score, '>=', score);
+        return this.getPlayerRank(username);
+      }
+
+      // Сохраняем только если это новый рекорд
       const newScore = {
         username,
         score,
@@ -69,13 +75,13 @@ export class LeaderboardManager {
       };
 
       await set(playerRef, newScore);
-      console.log('Score saved:', newScore); // Добавляем логирование
+      console.log('New high score saved:', newScore);
       
       // Обновляем локальный лидерборд
       const leaderboardSnapshot = await get(this.leaderboardRef);
       const leaderboardData = leaderboardSnapshot.val() || {};
       this.leaderboard = Object.values(leaderboardData)
-        .filter(entry => entry && entry.username)
+        .filter(entry => entry && entry.username && entry.score > 0) // Фильтруем нулевые значения
         .sort((a, b) => (b.score || 0) - (a.score || 0))
         .slice(0, this.maxEntries);
       
