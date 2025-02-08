@@ -4,7 +4,9 @@
   "description": "Snake game web application with leaderboard",
   "scripts": {
     "start": "node api/server.js",
-    "dev": "nodemon api/server.js"
+    "dev": "nodemon api/server.js",
+    "build": "webpack --mode production",
+    "format": "prettier --write ."
   },
   "author": "",
   "license": "ISC",

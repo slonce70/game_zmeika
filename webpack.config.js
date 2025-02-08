@@ -2,6 +2,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
 
 module.exports = {
   entry: './src/game.js',
@@ -50,10 +51,42 @@ module.exports = {
       }
     ]
   },
+  optimization: {
+    minimizer: [
+      new ImageMinimizerPlugin({
+        minimizer: {
+          implementation: ImageMinimizerPlugin.imageminGenerate,
+          options: {
+            plugins: [
+              ['gifsicle', { interlaced: true }],
+              ['jpegtran', { progressive: true }],
+              ['optipng', { optimizationLevel: 5 }],
+              [
+                'svgo',
+                {
+                  plugins: [
+                    {
+                      name: 'preset-default',
+                      params: {
+                        overrides: {
+                          removeViewBox: false,
+                        },
+                      },
+                    },
+                  ],
+                }
+              ],
+            ],
+          },
+        },
+      })
+    ],
+  },
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
-      filename: 'index.html'
+      filename: 'index.html',
+      scriptLoading: 'defer'
     }),
     new CopyWebpackPlugin({
       patterns: [
