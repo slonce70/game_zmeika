@@ -3,8 +3,11 @@ class LeaderboardManager {
     this.leaderboard = [];
     this.currentPlayer = null;
     this.maxEntries = 100;
-    this.leaderboardUrl = '/api/leaderboard';
-    this.heartbeatUrl = '/api/heartbeat';
+    const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `http://${window.location.hostname}:3000`
+      : '';
+    this.leaderboardUrl = `${baseUrl}/api/leaderboard`;
+    this.heartbeatUrl = `${baseUrl}/api/heartbeat`;
     this.activePlayers = 0;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
