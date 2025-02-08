@@ -188,4 +188,24 @@ class LeaderboardManager {
     this.leaderboardRef.off();
     this.onlineRef.off();
   }
+
+  /**
+   * Returns the personal record (best score) for the current player.
+   * @returns {number} The personal best score, or 0 if none.
+   */
+  getPersonalRecord() {
+    const score = this.getPlayerScore(this.currentPlayer);
+    return score !== null ? score : 0;
+  }
+
+  /**
+   * Marks the current player as offline (not playing).
+   */
+  markPlayerOffline() {
+    if (this.currentPlayer) {
+      const userRef = this.onlineRef.child(this.currentPlayer);
+      // Set player's status to not playing; here we store an object with lastActive and isPlaying flag
+      userRef.set({ lastActive: firebase.database.ServerValue.TIMESTAMP, isPlaying: false });
+    }
+  }
 } 
