@@ -21,7 +21,7 @@ export class Food {
     const y = this.position.y * gridSize;
     const size = gridSize - 4;
 
-    // Обновляем анимацию свечения
+    // Update glow animation
     this.glowIntensity += 0.05 * this.glowDirection;
     if (this.glowIntensity >= 1) {
       this.glowDirection = -1;
@@ -29,7 +29,7 @@ export class Food {
       this.glowDirection = 1;
     }
 
-    // Рисуем свечение
+    // Draw glow
     const glow = ctx.createRadialGradient(
       x + size/2 + 2, 
       y + size/2 + 2,
@@ -44,7 +44,7 @@ export class Food {
     ctx.fillStyle = glow;
     ctx.fillRect(x - size/2, y - size/2, size * 2, size * 2);
 
-    // Рисуем основную еду
+    // Draw main food
     const gradient = ctx.createRadialGradient(
       x + size/2 + 2,
       y + size/2 + 2,
@@ -62,7 +62,7 @@ export class Food {
     ctx.roundRect(x + 2, y + 2, size, size, 5);
     ctx.fill();
 
-    // Добавляем блик
+    // Highlight
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.beginPath();
     ctx.ellipse(
@@ -78,4 +78,4 @@ export class Food {
 
     this.animationFrame++;
   }
-} 
+}

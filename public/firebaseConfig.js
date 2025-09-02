@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBrAEG6Da5e_8Zmetlo_hT8B47RrCdcg0E",
@@ -15,7 +16,13 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Analytics may fail locally without HTTPS; ignore in dev
+let analytics;
+try { analytics = getAnalytics(app); } catch (e) { /* noop */ }
 const db = getDatabase(app);
+const auth = getAuth(app);
 
-export { db }; 
+// Anonymous auth to satisfy secure DB rules
+signInAnonymously(auth).catch((e) => console.error('Anonymous auth failed:', e));
+
+export { db, auth }; 

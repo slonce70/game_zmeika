@@ -1,133 +1,128 @@
-# 🐍 Snake Game Online
+# 🐍 Snake Game (Static + Firebase)
 
-Современная реализация классической игры "Змейка" с онлайн таблицей лидеров, отслеживанием активных игроков и красивыми визуальными эффектами.
+Modern Snake with realtime leaderboard, online presence, mobile controls, GSAP animations, bonus food and bilingual UI (EN/RU).
 
-## 🌟 Особенности
+## Features
 
-- **Современный дизайн**
-  - Адаптивный интерфейс для всех устройств
-  - Виртуальные кнопки управления для мобильных устройств
-  - Анимированная змейка с градиентами
-  - Пульсирующая еда с эффектом свечения
-  - Плавные анимации и переходы
+- UI/UX
+  - Responsive layout for desktop and mobile
+  - Mobile on-screen controls (touch friendly)
+  - Particles, glow food, floating scores, pause overlay
+  - Language switcher (English/Russian)
 
-- **Онлайн функционал**
-  - Таблица лидеров в реальном времени
-  - Точный счетчик активных игроков
-  - Автоматическая синхронизация результатов
-  - Сохранение лучших результатов в MongoDB
+- Realtime
+  - Leaderboard (best score per user)
+  - Online players presence with play/idle status
+  - Firebase Realtime Database (client-side only)
 
-- **Игровая механика**
-  - Управление стрелками на ПК
-  - Виртуальные кнопки на мобильных устройствах
-  - Увеличение скорости с ростом счета
-  - Система рейтинга игроков
-  - Пауза/продолжение игры
+## Project Structure
 
-## 🎮 Как играть
+- `public/` — source files (ES modules)
+  - `index.html` — UI shell + language selector
+  - `style.css` — styles (responsive, mobile, animations)
+  - `game.js` — main loop, controls, effects
+  - `snake.js`, `food.js`, `bonusFood.js`, `particles.js`, `scoreManager.js`
+  - `leaderboardManager.js`, `onlinePlayersManager.js` — Firebase logic
+  - `firebaseConfig.js` — Firebase app, auth (anonymous), database
+  - `i18n.js` — simple i18n helper
+- `dist/` — build output (copied from `public/`)
 
-1. Откройте [Snake Game](https://game-zmeika.vercel.app/)
-2. Введите свое имя
-3. Используйте:
-   - На ПК: стрелки клавиатуры
-   - На мобильных: виртуальные кнопки на экране
-4. Собирайте еду для роста и получения очков
-5. Нажмите пробел для паузы
-6. Следите за своим рейтингом в таблице лидеров
+## Local Run
 
-## 🏆 Система рейтинга
-
-- Топ-10 игроков отображается в реальном времени
-- Точное отображение количества активных игроков
-- Для каждого игрока сохраняется лучший результат
-- Время и дата каждого рекорда в формате:
-  - "Сегодня, ЧЧ:ММ"
-  - "Вчера, ЧЧ:ММ"
-  - "ДД.ММ.ГГГГ, ЧЧ:ММ"
-
-## 🛠 Технологии
-
-- **Frontend**
-  - HTML5 Canvas для отрисовки игры
-  - CSS3 для стилизации и анимаций
-  - JavaScript (ES6+) для игровой логики
-  - GSAP для плавных анимаций
-  - Адаптивный дизайн для всех устройств
-
-- **Backend**
-  - Node.js и Express
-  - MongoDB для хранения результатов
-  - WebSocket для отслеживания активных игроков
-  - Vercel для хостинга
-
-## 📱 Адаптивность
-
-- Поддержка всех современных браузеров
-- Оптимизация для мобильных устройств:
-  - Виртуальные кнопки управления
-  - Адаптивный размер игрового поля
-  - Удобное расположение элементов
-- Корректное отображение на планшетах
-- Оптимизация для различных размеров экрана
-
-## 🚀 Локальный запуск
-
-1. Клонируйте репозиторий:
-```bash
-git clone https://github.com/slonce70/game_zmeika.git
-```
-
-2. Установите зависимости:
+1) Install deps (optional, build script only):
 ```bash
 npm install
 ```
 
-3. Создайте файл `.env` с переменными окружения:
-```env
-# Для локальной разработки можно не указывать MONGODB_URI
-# В этом случае будет использоваться файловое хранилище
-MONGODB_URI=your_mongodb_connection_string
-NODE_ENV=development
-```
-
-4. Запустите сервер разработки:
+2) Build static files:
 ```bash
-# Запуск API сервера
-npm run dev
-
-# В отдельном терминале запустите клиент
-npm run client
+npm run build
 ```
 
-5. Откройте `http://localhost:9000` в браузере
+3) Serve `dist/` locally:
+```bash
+npx serve dist
+# or
+python3 -m http.server 5173 -d dist
+```
+Open the printed URL in your browser.
 
-## 🔧 Troubleshooting
+## Firebase Setup
 
-### Локальная разработка
-- Если вы видите ошибки CORS, убедитесь что:
-  - В `.env` установлен `NODE_ENV=development`
-  - Сервер запущен на порту 3000
-  - Клиент запущен на порту 9000
+1) Create a Firebase project (Console → Create project)
+2) Enable Realtime Database (prefer region `europe-west1`) and Anonymous Auth:
+   - Authentication → Sign-in method → Anonymous → Enable
+3) Get your Web SDK config (Project settings → Your apps → Web) and paste into `public/firebaseConfig.js`.
+4) Database Rules (paste into Realtime Database → Rules):
+```json
+{
+  "rules": {
+    ".read": true,
+    "online": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
+      }
+    },
+    "leaderboard": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "username": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 15" },
+        "date": { ".validate": "newData.isString()" },
+        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" }
+      }
+    }
+  }
+}
+```
+Anonymous auth is initialized in `firebaseConfig.js`. The app stores leaderboard entries and presence by uid.
 
-### Проблемы с таблицей лидеров
-- Проверьте подключение к MongoDB (если используется)
-- При локальной разработке без MongoDB используется файловое хранилище
-- Убедитесь, что API сервер запущен и доступен
+### Настройка Firebase (RU)
 
-### Мобильные устройства
-- Используются passive event listeners для улучшения производительности
-- Поддерживаются свайпы для управления змейкой
-- Автоматическая адаптация под размер экрана
+1) Создайте проект в Firebase Console → Create project
+2) Включите Realtime Database (лучше регион `europe-west1`) и анонимную авторизацию:
+   - Authentication → Sign-in method → Anonymous → Enable
+3) Получите Web SDK config (Project settings → Your apps → Web) и вставьте в `public/firebaseConfig.js`.
+4) Задайте правила БД (Realtime Database → Rules):
+```json
+{
+  "rules": {
+    ".read": true,
+    "online": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
+      }
+    },
+    "leaderboard": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "username": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 15" },
+        "date": { ".validate": "newData.isString()" },
+        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" }
+      }
+    }
+  }
+}
+```
+5) Готово: откройте приложение, введите имя → результаты и онлайн‑статус будут сохраняться по вашему `uid`.
 
-## 🔄 Обновления
+## Deploy (Vercel)
 
-### Последнее обновление
-- Улучшена обработка ошибок и повторных попыток подключения
-- Добавлена поддержка файлового хранилища для локальной разработки
-- Оптимизирована работа с сенсорным экраном
-- Исправлены проблемы с CORS
-- Улучшена стабильность работы таблицы лидеров
+- Connect the repo to Vercel
+- Settings → Build & Output
+  - Build Command: `npm run build`
+  - Output Directory: `dist`
+- Push to main → auto deploy
 
-## 📝 Лицензия
+## How to Play
 
-MIT License 
+- Desktop: Arrow keys, Space for pause
+- Mobile: On-screen arrows (tap), pause overlay with Space if keyboard present
+- Eat red food (+1), collect golden bonus (+5, temporary slow-down)
+
+## Notes (RU)
+
+Интерфейс поддерживает переключение языка (EN/RU). Результаты и онлайн‑статус сохраняются в Firebase Realtime Database по `uid` (анонимная авторизация включена). Для продакшна примените правила БД выше.

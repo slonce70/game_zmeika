@@ -18,7 +18,7 @@ export class Snake {
   }
 
   update() {
-    // Обновляем направление
+    // Apply queued direction
     this.direction = this.newDirection;
     const head = this.body[0];
     let newHead = { ...head };
@@ -38,10 +38,10 @@ export class Snake {
         break;
     }
     
-    // Добавляем новую голову
+    // Add new head
     this.body.unshift(newHead);
 
-    // Если нет запроса на рост, убираем последний сегмент
+    // Trim tail when no growth pending
     if (this.pendingGrowth > 0) {
       this.pendingGrowth--;
     } else {
@@ -54,36 +54,36 @@ export class Snake {
   }
 
   draw(ctx, gridSize) {
-    // Рисуем каждый сегмент змеи
+    // Draw each segment
     this.body.forEach((segment, index) => {
       const x = segment.x * gridSize;
       const y = segment.y * gridSize;
-      const size = gridSize - 2; // Немного меньше для эффекта отступов
+      const size = gridSize - 2; // Slightly smaller for padding effect
 
-      // Создаем градиент для сегмента
+      // Create gradient for segment
       const gradient = ctx.createRadialGradient(
         x + size/2, y + size/2, 0,
         x + size/2, y + size/2, size
       );
 
       if (index === 0) {
-        // Голова змеи
+        // Head
         gradient.addColorStop(0, this.colors.head);
         gradient.addColorStop(1, this.colors.border);
       } else {
-        // Тело змеи
+        // Body
         const colorStop = Math.max(0.2, 1 - (index / this.body.length));
         gradient.addColorStop(0, this.colors.body);
         gradient.addColorStop(colorStop, this.colors.border);
       }
 
-      // Рисуем сегмент с градиентом
+      // Draw rounded segment
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.roundRect(x + 1, y + 1, size, size, 5);
       ctx.fill();
 
-      // Добавляем блик
+      // Highlight for head
       if (index === 0) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.beginPath();
@@ -105,4 +105,4 @@ export class Snake {
     const [head, ...body] = this.body;
     return body.some(segment => segment.x === head.x && segment.y === head.y);
   }
-} 
+}

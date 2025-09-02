@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": true,
+    "online": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
+      }
+    },
+    "leaderboard": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "username": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 15" },
+        "date": { ".validate": "newData.isString()" },
+        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" }
+      }
+    }
+  }
+}
+

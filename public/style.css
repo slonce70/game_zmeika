@@ -22,6 +22,7 @@ body {
   background: var(--bg-color);
   font-family: 'Press Start 2P', cursive;
   color: var(--text-color);
+  overscroll-behavior: none;
 }
 
 .game-wrapper {
@@ -46,6 +47,20 @@ body {
 
 .game-header {
   text-align: center;
+}
+
+.lang-switcher {
+  margin: 0 auto 10px;
+}
+
+.lang-switcher select {
+  background: var(--bg-color);
+  color: var(--text-color);
+  border: 2px solid var(--accent-color);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
 }
 
 h1 {
@@ -78,6 +93,8 @@ canvas {
   display: block;
   background: #000;
   border-radius: 2px;
+  touch-action: none;
+  user-select: none;
 }
 
 .controls {
@@ -105,7 +122,33 @@ button:hover {
   background-color: #60d888;
 }
 
-/* Модальные окна */
+/* Floating score text */
+.floating-score {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  pointer-events: none;
+}
+
+/* Pause overlay */
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+}
+.pause-overlay .pause-text {
+  font-family: 'Press Start 2P', cursive;
+  color: var(--accent-color);
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+}
+
+/* Modals */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -135,7 +178,7 @@ button:hover {
   font-size: 1.2em;
 }
 
-/* Форма логина */
+/* Login form */
 .login-form {
   display: flex;
   flex-direction: column;
@@ -152,7 +195,7 @@ button:hover {
   font-size: 0.8em;
 }
 
-/* Таблица лидеров */
+/* Leaderboard table */
 .leaderboard {
   width: 100%;
   border-collapse: collapse;
@@ -180,7 +223,7 @@ button:hover {
   background: rgba(80, 200, 120, 0.2);
 }
 
-/* Боковая панель с топ-10 */
+/* Top-10 sidebar */
 .top-players-sidebar {
   background: var(--primary-color);
   border-radius: 10px;
@@ -262,7 +305,7 @@ button:hover {
   color: var(--accent-color);
 }
 
-/* Анимации */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -289,7 +332,7 @@ button:hover {
   }
 }
 
-/* Обновленные стили для адаптивности */
+/* Responsive layout */
 @media (max-width: 1024px) {
   .game-wrapper {
     flex-direction: column;
@@ -484,7 +527,7 @@ button:hover {
   }
 }
 
-/* Добавляем стили для touch-устройств */
+/* Touch devices */
 @media (hover: none) {
   .player-card:hover {
     transform: none;
@@ -499,7 +542,7 @@ button:hover {
   }
 }
 
-/* Добавим стили для счетчика игроков */
+/* Players counter */
 .players-online {
   font-size: 0.8em;
   margin-bottom: 10px;
@@ -515,20 +558,20 @@ button:hover {
   animation: pulse 2s infinite;
 }
 
-/* Обновим стили для даты в карточках игроков */
+/* Player card date */
 .player-date {
   font-size: 0.6em;
   color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
 }
 
-/* Обновим стили для таблицы лидеров */
+/* Leaderboard date column */
 .leaderboard td:last-child {
   font-size: 0.6em;
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Добавим анимацию для счетчика игроков */
+/* Players counter animation */
 @keyframes countChange {
   0% {
     transform: scale(1);
@@ -546,7 +589,7 @@ button:hover {
   animation: countChange 0.3s ease-out;
 }
 
-/* Мобильное управление */
+/* Mobile controls */
 .mobile-controls {
   display: none;
   flex-direction: column;
@@ -574,6 +617,7 @@ button:hover {
   border: none;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.1s, background-color 0.2s;
@@ -584,14 +628,14 @@ button:hover {
   background-color: #60d888;
 }
 
-/* Показываем мобильное управление только на touch-устройствах */
+/* Show mobile controls only on touch devices */
 @media (hover: none) and (pointer: coarse) {
   .mobile-controls {
     display: flex;
   }
 }
 
-/* Стили для сайдбара онлайн игроков */
+/* Online players sidebar */
 .online-players-sidebar {
   width: 200px;
   background: rgba(42, 42, 42, 0.95);
@@ -700,7 +744,7 @@ button:hover {
   font-weight: bold;
 }
 
-/* Медиа-запросы для адаптивности */
+/* Media queries */
 @media (max-width: 768px) {
   .game-wrapper {
     flex-direction: column;
@@ -729,7 +773,7 @@ button:hover {
   }
 }
 
-/* Анимации */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }

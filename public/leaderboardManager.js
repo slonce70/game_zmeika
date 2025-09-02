@@ -1,10 +1,12 @@
-import { db } from "./firebaseConfig.js";
+import { db, auth } from "./firebaseConfig.js";
 import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
 
 export class LeaderboardManager {
   constructor() {
     this.leaderboard = [];
-    this.currentPlayer = null;
+    this.currentUid = null;
+    this.currentPlayerName = null;
     this.maxEntries = 10;
     this.activePlayers = 0;
     
@@ -12,24 +14,26 @@ export class LeaderboardManager {
     this.leaderboardRef = ref(db, 'leaderboard');
     this.onlineRef = ref(db, 'online');
     
+    // Track auth state
+    onAuthStateChanged(auth, (user) => {
+      this.currentUid = user?.uid || null;
+    });
+
     // Subscribe to leaderboard changes with error handling
     onValue(this.leaderboardRef, (snapshot) => {
       try {
         const data = snapshot.val() || {};
-        console.log('Received leaderboard data:', data);
-        
-        // Фильтруем и сортируем данные один раз
-        const filteredData = Object.values(data)
-          .filter(entry => entry && entry.username && entry.score > 0)
-          .sort((a, b) => b.score - a.score)
+        const filteredData = Object.entries(data)
+          .map(([uid, entry]) => ({ uid, ...(entry || {}) }))
+          .filter(entry => entry && entry.username && (entry.score || 0) >= 0)
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
           .slice(0, this.maxEntries);
 
-        // Проверяем, действительно ли данные изменились
+        // Only update if data actually changed
         const currentDataString = JSON.stringify(this.leaderboard);
         const newDataString = JSON.stringify(filteredData);
 
         if (currentDataString !== newDataString) {
-          console.log('Leaderboard data changed, updating display');
           this.leaderboard = filteredData;
           this.updateLeaderboardDisplay();
           localStorage.setItem('snakeLeaderboard', JSON.stringify(this.leaderboard));
@@ -61,63 +65,83 @@ export class LeaderboardManager {
   }
 
   async saveScore(username, score) {
-    if (!username || typeof score !== 'number' || score <= 0) return; // Не сохраняем нулевые и отрицательные значения
+    if (typeof score !== 'number' || score <= 0) return null; // Skip zero/negative
+    const uid = this.currentUid;
+    if (!uid) return null;
 
     try {
-      const playerRef = ref(db, 'leaderboard/' + username);
+      const playerRef = ref(db, 'leaderboard/' + uid);
       const snapshot = await get(playerRef);
       const currentData = snapshot.val();
 
-      // Проверяем, есть ли уже лучший результат
-      if (currentData && currentData.score >= score) {
-        console.log('Current score is not better than existing:', currentData.score, '>=', score);
-        return this.getPlayerRank(username);
+      // Check if existing best is higher or equal
+      if (currentData && (currentData.score || 0) >= score) {
+        return this.getPlayerRank(uid);
       }
 
-      // Сохраняем только если это новый рекорд
+      // Save only if it's a new personal best
       const newScore = {
-        username,
+        username: username || this.currentPlayerName || 'Player',
         score,
         date: new Date().toISOString(),
         lastActive: serverTimestamp()
       };
 
       await set(playerRef, newScore);
-      console.log('New high score saved:', newScore);
-      
-      // Обновляем локальный лидерборд
+      // Update local list
       const leaderboardSnapshot = await get(this.leaderboardRef);
       const leaderboardData = leaderboardSnapshot.val() || {};
-      this.leaderboard = Object.values(leaderboardData)
-        .filter(entry => entry && entry.username && entry.score > 0) // Фильтруем нулевые значения
+      this.leaderboard = Object.entries(leaderboardData)
+        .map(([id, entry]) => ({ uid: id, ...(entry || {}) }))
+        .filter(entry => entry && entry.username && (entry.score || 0) >= 0)
         .sort((a, b) => (b.score || 0) - (a.score || 0))
         .slice(0, this.maxEntries);
       
       this.updateLeaderboardDisplay();
-      return this.getPlayerRank(username);
+      return this.getPlayerRank(uid);
     } catch (error) {
       console.error('Error saving score:', error);
       return null;
     }
   }
 
+  async setUsername(username) {
+    this.currentPlayerName = username;
+    const uid = this.currentUid;
+    if (!uid || !username) return;
+    try {
+      const playerRef = ref(db, 'leaderboard/' + uid);
+      const snapshot = await get(playerRef);
+      const currentData = snapshot.val() || {};
+      await set(playerRef, {
+        ...currentData,
+        username,
+        lastActive: serverTimestamp()
+      });
+    } catch (e) {
+      console.error('Failed to set username:', e);
+    }
+  }
+
   markPlayerOnline(username) {
-    if (!username) return;
-    
-    this.currentPlayer = username;
-    const userRef = ref(db, 'online/' + username);
-    
-    // Mark player as online
-    set(userRef, true);
-    
-    // Remove from online list when disconnected
-    onDisconnect(userRef).remove();
-    
-    // Update lastActive in leaderboard
-    const playerRef = ref(db, 'leaderboard/' + username);
-    update(playerRef, {
-      lastActive: serverTimestamp()
+    const uid = this.currentUid;
+    if (!uid) {
+      // Retry shortly if auth not ready yet
+      setTimeout(() => this.markPlayerOnline(username), 300);
+      return;
+    }
+    this.currentPlayerName = username || this.currentPlayerName;
+    // Presence object compatible with OnlinePlayersManager
+    const userRef = ref(db, 'online/' + uid);
+    set(userRef, {
+      username: this.currentPlayerName || 'Player',
+      lastActive: serverTimestamp(),
+      isPlaying: true
     });
+    onDisconnect(userRef).remove();
+    // Update lastActive in leaderboard
+    const playerRef = ref(db, 'leaderboard/' + uid);
+    update(playerRef, { lastActive: serverTimestamp(), username: this.currentPlayerName || 'Player' });
   }
 
   updateActivePlayersDisplay() {
@@ -129,29 +153,19 @@ export class LeaderboardManager {
 
   updateLeaderboardDisplay() {
     const sidebarLeaderboard = document.getElementById('sidebarLeaderboard');
-    if (!sidebarLeaderboard) {
-      console.error('Sidebar leaderboard element not found');
-      return;
-    }
+    if (!sidebarLeaderboard) return;
 
     try {
-      console.log('Updating leaderboard display with:', this.leaderboard);
-      
-      if (!Array.isArray(this.leaderboard) || this.leaderboard.length === 0) {
-        sidebarLeaderboard.innerHTML = '<div class="player-card">Нет результатов</div>';
-        return;
-      }
-
-      sidebarLeaderboard.innerHTML = this.leaderboard
+      sidebarLeaderboard.innerHTML = (Array.isArray(this.leaderboard) ? this.leaderboard : [])
         .map((entry, index) => {
           if (!entry || !entry.username) return '';
           return `
-            <div class="player-card ${entry.username === this.currentPlayer ? 'current-player' : ''}">
+            <div class="player-card ${entry.uid === this.currentUid ? 'current-player' : ''}">
               <div class="player-rank">#${index + 1}</div>
               <div class="player-info">
                 <div class="player-name">${this.escapeHtml(entry.username)}</div>
                 <div class="player-score">${entry.score || 0}</div>
-                <div class="player-date">${this.formatDate(entry.date || new Date())}</div>
+                <div class="player-date">${this.formatDate(entry.date || new Date(), (localStorage.getItem('lang') || 'en'))}</div>
               </div>
             </div>
           `;
@@ -160,35 +174,36 @@ export class LeaderboardManager {
         .join('');
     } catch (error) {
       console.error('Error updating leaderboard display:', error);
-      sidebarLeaderboard.innerHTML = '<div class="player-card">Ошибка загрузки</div>';
+      sidebarLeaderboard.innerHTML = '';
     }
   }
 
-  formatDate(dateString) {
+  formatDate(dateString, lang = 'en') {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return 'Недавно';
+        return 'Recently';
       }
       
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
 
-      const time = date.toLocaleTimeString('ru-RU', {
+      const locale = lang === 'ru' ? 'ru-RU' : 'en-US';
+      const time = date.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit'
       });
 
       if (date.toDateString() === today.toDateString()) {
-        return `Сегодня, ${time}`;
+        return `${lang === 'ru' ? 'Сегодня' : 'Today'}, ${time}`;
       }
       if (date.toDateString() === yesterday.toDateString()) {
-        return `Вчера, ${time}`;
+        return `${lang === 'ru' ? 'Вчера' : 'Yesterday'}, ${time}`;
       }
-      return `${date.toLocaleDateString('ru-RU')}, ${time}`;
+      return `${date.toLocaleDateString(locale)}, ${time}`;
     } catch (e) {
-      return 'Недавно';
+      return 'Recently';
     }
   }
 
@@ -204,24 +219,24 @@ export class LeaderboardManager {
   }
 
   isHighScore(score) {
-    const playerCurrentScore = this.getPlayerScore(this.currentPlayer);
+    const playerCurrentScore = this.getPlayerScore(this.currentUid);
     return this.leaderboard.length < this.maxEntries || 
            score > this.leaderboard[this.leaderboard.length - 1].score ||
            (playerCurrentScore && score > playerCurrentScore);
   }
 
-  getPlayerScore(username) {
-    const playerEntry = this.leaderboard.find(entry => entry.username === username);
+  getPlayerScore(uid) {
+    const playerEntry = this.leaderboard.find(entry => entry.uid === uid);
     return playerEntry ? playerEntry.score : null;
   }
 
-  getPlayerRank(username) {
-    return this.leaderboard.findIndex(entry => entry.username === username) + 1;
+  getPlayerRank(uid) {
+    return this.leaderboard.findIndex(entry => entry.uid === uid) + 1;
   }
 
   cleanup() {
-    if (this.currentPlayer) {
-      const userRef = ref(db, 'online/' + this.currentPlayer);
+    if (this.currentUid) {
+      const userRef = ref(db, 'online/' + this.currentUid);
       set(userRef, null);
     }
   }

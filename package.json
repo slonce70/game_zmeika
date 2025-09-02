@@ -3,34 +3,12 @@
   "version": "1.0.0",
   "description": "Snake game web application with leaderboard",
   "scripts": {
-    "start": "node api/server.js",
-    "dev": "nodemon api/server.js",
-    "build": "webpack --mode production"
+    "build": "rm -rf dist && mkdir -p dist && cp -R public/* dist/"
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "gsap": "^3.12.5",
-    "mongodb": "^5.0.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.26.7",
-    "@babel/preset-env": "^7.26.7",
-    "babel-loader": "^9.2.1",
-    "css-loader": "^6.8.1",
-    "style-loader": "^3.3.3",
-    "html-webpack-plugin": "^5.5.0",
-    "copy-webpack-plugin": "^11.0.0",
-    "mini-css-extract-plugin": "^2.7.6",
-    "firebase": "^11.3.0",
-    "nodemon": "^2.0.22",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.0"
-  },
-  "main": "webpack.config.js",
+  "dependencies": {},
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/slonce70/game_zmeika.git"

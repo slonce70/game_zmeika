@@ -1,47 +1,51 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Snake Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="game-wrapper">
-        <!-- Добавляем сайдбар для онлайн игроков -->
+        <!-- Online players sidebar -->
         <div class="online-players-sidebar" id="onlinePlayersSidebar">
             <div class="online-header">
-                <h3>Online Players</h3>
+                <h3 data-i18n="online_sidebar">Online Players</h3>
                 <button class="toggle-sidebar" id="toggleSidebar">←</button>
             </div>
             <div class="online-list" id="onlinePlayersList">
-                <!-- Динамический контент -->
+                <!-- Dynamic content -->
             </div>
-            <!-- Мобильная иконка -->
+            <!-- Mobile indicator -->
             <div class="mobile-indicator" id="mobileOnlineIndicator">
                 <span class="player-count">0</span>
             </div>
         </div>
 
-        <!-- Основной контейнер игры -->
+        <!-- Main game container -->
         <div class="game-container">
             <div class="game-header">
-                <h1>Snake Game</h1>
+                <h1 data-i18n="title">Snake Game</h1>
+                <div class="lang-switcher">
+                    <select id="langSelect" aria-label="Language">
+                        <option value="en">EN</option>
+                        <option value="ru">RU</option>
+                    </select>
+                </div>
                 <div class="players-online">
-                    <span class="players-label">Сейчас играют:</span>
+                    <span class="players-label" data-i18n="online_players">Now playing:</span>
                     <span id="activePlayersCounter" class="players-count">0</span>
                 </div>
                 <div class="score-container">
-                    <span class="score-label">Score:</span>
+                    <span class="score-label" data-i18n="score">Score:</span>
                     <span class="score-value">0</span>
                 </div>
             </div>
-            <div class="canvas-container">
-                <!-- Canvas создается динамически в game.js -->
-            </div>
+            <div class="canvas-container"></div>
             
-            <!-- Добавляем мобильное управление -->
+            <!-- Mobile controls -->
             <div class="mobile-controls">
                 <div class="mobile-controls-row">
                     <button class="control-btn up-btn" data-direction="up">↑</button>
@@ -57,58 +61,58 @@
 
             <div class="controls">
                 <div class="control-info">
-                    <p>Use arrow keys to control the snake</p>
-                    <button class="restart-btn">Restart Game</button>
-                    <button class="leaderboard-btn">Full Leaderboard</button>
+                    <p data-i18n="use_arrows">Use arrow keys to control the snake</p>
+                    <button class="restart-btn" data-i18n="restart">Restart Game</button>
+                    <button class="leaderboard-btn" data-i18n="leaderboard_full">Full Leaderboard</button>
                 </div>
             </div>
         </div>
 
-        <!-- Боковая панель с топ-10 -->
+        <!-- Top-10 sidebar -->
         <div class="top-players-sidebar">
             <div class="sidebar-header">
-                <h2>Top 10 Players</h2>
+                <h2 data-i18n="top10">Top 10 Players</h2>
                 <div class="live-indicator">
                     <span class="pulse"></span>
-                    Live
+                    <span data-i18n="live">Live</span>
                 </div>
             </div>
             <div class="top-players-list" id="sidebarLeaderboard">
-                <!-- Заполняется динамически -->
+                <!-- Filled dynamically -->
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно логина -->
+    <!-- Login modal -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal">
-            <h2>Enter Your Name</h2>
+            <h2 data-i18n="enter_name">Enter Your Name</h2>
             <form class="login-form" id="loginForm">
-                <input type="text" id="username" placeholder="Your name" required minlength="2" maxlength="15">
-                <button type="submit">Start Game</button>
+                <input type="text" id="username" data-i18n="enter_name" placeholder="Enter Your Name" required minlength="2" maxlength="15">
+                <button type="submit" data-i18n="start_game">Start Game</button>
             </form>
         </div>
     </div>
 
-    <!-- Модальное окно таблицы лидеров -->
+    <!-- Leaderboard modal -->
     <div class="modal-overlay" id="leaderboardModal" style="display: none;">
         <div class="modal">
-            <h2>Top Players</h2>
+            <h2 data-i18n="leaderboard_full">Full Leaderboard</h2>
             <table class="leaderboard">
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th>Player</th>
-                        <th>Score</th>
-                        <th>Date</th>
+                        <th data-i18n="rank">Rank</th>
+                        <th data-i18n="player">Player</th>
+                        <th data-i18n="score">Score</th>
+                        <th data-i18n="date">Date</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
-                    <!-- Заполняется динамически -->
+                    <!-- Filled dynamically -->
                 </tbody>
             </table>
             <div class="leaderboard-controls">
-                <button id="closeLeaderboard">Close</button>
+                <button id="closeLeaderboard" data-i18n="close">Close</button>
             </div>
         </div>
     </div>
@@ -116,6 +120,16 @@
     <!-- Include vendor scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
+    <!-- Load i18n and apply selection before main -->
+    <script type="module">
+      import { i18n } from '/i18n.js';
+      i18n.apply();
+      const select = document.getElementById('langSelect');
+      if (select) {
+        select.value = i18n.lang;
+        select.addEventListener('change', () => i18n.setLang(select.value));
+      }
+    </script>
     <!-- Load our main module -->
     <script type="module" src="/game.js"></script>
 </body>

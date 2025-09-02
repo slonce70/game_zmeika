@@ -1,22 +1,24 @@
-import { db } from "./firebaseConfig.js";
+import { db, auth } from "./firebaseConfig.js";
 import { ref, onValue, get, set, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
-import gsap from "gsap";
+// GSAP is loaded via CDN in index.html and available as global `gsap`
 
 export class OnlinePlayersManager {
     constructor() {
         this.onlinePlayers = new Map();
-        this.currentPlayer = null;
+        this.currentUid = null;
+        this.currentUsername = null;
         this.sidebarVisible = window.innerWidth > 768;
-        this.lastRender = new Map(); // Для отслеживания изменений
+        this.lastRender = new Map(); // Track changes
         
-        // DOM элементы
+        // DOM elements
         this.sidebar = document.getElementById('onlinePlayersSidebar');
         this.playersList = document.getElementById('onlinePlayersList');
         this.toggleButton = document.getElementById('toggleSidebar');
         this.mobileIndicator = document.getElementById('mobileOnlineIndicator');
         
-        // Firebase референс
+        // Firebase ref
         this.onlineRef = ref(db, 'online');
+        this.currentUid = auth.currentUser?.uid || null;
         
         this.initializeUI();
         this.setupEventListeners();
@@ -24,21 +26,21 @@ export class OnlinePlayersManager {
     }
 
     initializeUI() {
-        // Установка начального состояния сайдбара
+        // Initial sidebar state
         if (this.sidebarVisible) {
             this.sidebar.classList.add('visible');
             this.toggleButton.classList.add('collapsed');
         }
 
-        // Обработка мобильного индикатора
+        // Mobile indicator handler
         this.mobileIndicator.addEventListener('click', () => this.toggleSidebar());
     }
 
     setupEventListeners() {
-        // Обработчик кнопки сворачивания
+        // Toggle button handler
         this.toggleButton.addEventListener('click', () => this.toggleSidebar());
 
-        // Обработчик изменения размера окна
+        // Handle window resize
         window.addEventListener('resize', this.handleResize.bind(this));
     }
 
@@ -47,16 +49,17 @@ export class OnlinePlayersManager {
             const data = snapshot.val() || {};
             const newPlayers = new Map();
             
-            // Обновляем список игроков
-            Object.entries(data).forEach(([username, status]) => {
-                newPlayers.set(username, {
-                    username,
-                    lastActive: status.lastActive || Date.now(),
-                    isPlaying: status.isPlaying || false
+            // Rebuild players map (keys are uid)
+            Object.entries(data).forEach(([uid, status]) => {
+                newPlayers.set(uid, {
+                    uid,
+                    username: status?.username || 'Player',
+                    lastActive: status?.lastActive || Date.now(),
+                    isPlaying: !!status?.isPlaying
                 });
             });
             
-            // Проверяем, действительно ли есть изменения
+            // Check if there are material changes
             if (this.hasPlayersChanged(newPlayers)) {
                 this.onlinePlayers = newPlayers;
                 this.updatePlayersList();
@@ -67,8 +70,8 @@ export class OnlinePlayersManager {
     hasPlayersChanged(newPlayers) {
         if (this.onlinePlayers.size !== newPlayers.size) return true;
         
-        for (const [username, newData] of newPlayers) {
-            const currentData = this.onlinePlayers.get(username);
+        for (const [uid, newData] of newPlayers) {
+            const currentData = this.onlinePlayers.get(uid);
             if (!currentData) return true;
             if (currentData.isPlaying !== newData.isPlaying) return true;
             if (currentData.lastActive !== newData.lastActive) return true;
@@ -80,7 +83,7 @@ export class OnlinePlayersManager {
     updatePlayersList() {
         if (!this.playersList) return;
 
-        // Сортируем игроков
+        // Sort players by status and recent activity
         const sortedPlayers = Array.from(this.onlinePlayers.values())
             .sort((a, b) => {
                 if (a.isPlaying !== b.isPlaying) {
@@ -89,7 +92,7 @@ export class OnlinePlayersManager {
                 return b.lastActive - a.lastActive;
             });
 
-        // Обновляем счетчик плавно
+        // Smoothly update player counter badge
         const playerCount = document.querySelector('.player-count');
         if (playerCount) {
             const currentCount = parseInt(playerCount.textContent);
@@ -104,25 +107,25 @@ export class OnlinePlayersManager {
             }
         }
 
-        // Создаем Map текущих элементов для быстрого поиска
+        // Build map of existing elements for quick diff
         const currentElements = new Map();
         Array.from(this.playersList.children).forEach(el => {
-            currentElements.set(el.dataset.username, el);
+            currentElements.set(el.dataset.uid, el);
         });
 
-        // Обновляем или создаем элементы
+        // Update or create player elements
         sortedPlayers.forEach((player, index) => {
-            const existingElement = currentElements.get(player.username);
+            const existingElement = currentElements.get(player.uid);
             const playerElement = existingElement || document.createElement('div');
             
             if (!existingElement) {
-                // Новый элемент
+                // New element animation
                 playerElement.style.opacity = '0';
                 playerElement.style.transform = 'translateX(-10px)';
             }
             
-            playerElement.className = `online-player${player.isPlaying ? ' playing' : ''}${player.username === this.currentPlayer ? ' current' : ''}`;
-            playerElement.dataset.username = player.username;
+            playerElement.className = `online-player${player.isPlaying ? ' playing' : ''}${player.uid === this.currentUid ? ' current' : ''}`;
+            playerElement.dataset.uid = player.uid;
             
             const newHtml = `
                 <div class="player-status${player.isPlaying ? '' : ' idle'}"></div>
@@ -143,10 +146,10 @@ export class OnlinePlayersManager {
                 });
             }
             
-            currentElements.delete(player.username);
+            currentElements.delete(player.uid);
         });
 
-        // Удаляем отсутствующие элементы с анимацией
+        // Remove missing elements with animation
         currentElements.forEach(element => {
             gsap.to(element, {
                 opacity: 0,
@@ -193,13 +196,17 @@ export class OnlinePlayersManager {
     }
 
     setCurrentPlayer(username) {
-        this.currentPlayer = username;
+        this.currentUsername = username;
+        this.currentUid = auth.currentUser?.uid || this.currentUid;
         this.updatePlayersList();
     }
 
-    updatePlayerStatus(username, isPlaying) {
-        const userRef = ref(db, `online/${username}`);
+    updatePlayerStatus(isPlaying) {
+        const uid = auth.currentUser?.uid || this.currentUid;
+        if (!uid) return;
+        const userRef = ref(db, `online/${uid}`);
         set(userRef, {
+            username: this.currentUsername || 'Player',
             lastActive: serverTimestamp(),
             isPlaying
         });
@@ -217,9 +224,9 @@ export class OnlinePlayersManager {
     }
 
     cleanup() {
-        if (this.currentPlayer) {
-            const userRef = ref(db, `online/${this.currentPlayer}`);
+        if (this.currentUid) {
+            const userRef = ref(db, `online/${this.currentUid}`);
             set(userRef, null);
         }
     }
-} 
+}
