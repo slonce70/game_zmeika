@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Snake Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <div class="game-wrapper">
@@ -117,12 +117,23 @@
         </div>
     </div>
 
+    <!-- High score modal -->
+    <div class="modal-overlay" id="highScoreModal" style="display: none;">
+        <div class="modal">
+            <h2 data-i18n="new_high_score">New High Score!</h2>
+            <div class="highscore-body" id="highScoreBody"></div>
+            <div class="leaderboard-controls">
+                <button id="closeHighScore" data-i18n="continue">Continue</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Include vendor scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <!-- Load i18n and apply selection before main -->
     <script type="module">
-      import { i18n } from '/i18n.js';
+      import { i18n } from './i18n.js';
       i18n.apply();
       const select = document.getElementById('langSelect');
       if (select) {
@@ -131,6 +142,6 @@
       }
     </script>
     <!-- Load our main module -->
-    <script type="module" src="/game.js"></script>
+    <script type="module" src="./game.js"></script>
 </body>
 </html> 

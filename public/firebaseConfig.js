@@ -8,7 +8,7 @@ const firebaseConfig = {
   authDomain: "game-zmeika.firebaseapp.com",
   databaseURL: "https://game-zmeika-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "game-zmeika",
-  storageBucket: "game-zmeika.firebasestorage.app",
+  storageBucket: "game-zmeika.appspot.com",
   messagingSenderId: "501669425656",
   appId: "1:501669425656:web:95fd75d725d3519b76a60d",
   measurementId: "G-92RT9TCGW0"

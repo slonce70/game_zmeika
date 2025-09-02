@@ -1,4 +1,5 @@
 import { Food } from './food.js';
+import { roundRect } from './canvasUtils.js';
 
 export class BonusFood extends Food {
   constructor(gridSize, canvasSize) {
@@ -43,7 +44,7 @@ export class BonusFood extends Food {
     gradient.addColorStop(1, '#b8860b');
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(x + 2, y + 2, size, size, 6);
+    roundRect(ctx, x + 2, y + 2, size, size, 6);
     ctx.fill();
 
     // Shine
@@ -53,4 +54,3 @@ export class BonusFood extends Food {
     ctx.fill();
   }
 }
-

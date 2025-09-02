@@ -1,3 +1,5 @@
+import { roundRect } from './canvasUtils.js';
+
 export class Snake {
   constructor() {
     this.reset();
@@ -80,7 +82,7 @@ export class Snake {
       // Draw rounded segment
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.roundRect(x + 1, y + 1, size, size, 5);
+      roundRect(ctx, x + 1, y + 1, size, size, 5);
       ctx.fill();
 
       // Highlight for head

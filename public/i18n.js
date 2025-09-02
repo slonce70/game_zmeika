@@ -17,7 +17,9 @@ const DICT = {
     paused: 'Paused',
     today: 'Today',
     yesterday: 'Yesterday',
-    online_sidebar: 'Online Players'
+    online_sidebar: 'Online Players',
+    new_high_score: 'New High Score!',
+    continue: 'Continue'
   },
   ru: {
     title: 'Snake Game',
@@ -37,7 +39,9 @@ const DICT = {
     paused: 'Пауза',
     today: 'Сегодня',
     yesterday: 'Вчера',
-    online_sidebar: 'Онлайн игроки'
+    online_sidebar: 'Онлайн игроки',
+    new_high_score: 'Новый рекорд!',
+    continue: 'Продолжить'
   }
 };
 
@@ -79,4 +83,3 @@ class I18n {
 }
 
 export const i18n = new I18n();
-

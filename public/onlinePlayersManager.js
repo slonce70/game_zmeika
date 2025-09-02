@@ -45,7 +45,7 @@ export class OnlinePlayersManager {
     }
 
     startOnlinePlayersSubscription() {
-        onValue(this.onlineRef, (snapshot) => {
+        this._unsubOnline = onValue(this.onlineRef, (snapshot) => {
             const data = snapshot.val() || {};
             const newPlayers = new Map();
             
@@ -98,12 +98,8 @@ export class OnlinePlayersManager {
             const currentCount = parseInt(playerCount.textContent);
             const newCount = sortedPlayers.length;
             if (currentCount !== newCount) {
-                gsap.to(playerCount, {
-                    textContent: newCount,
-                    duration: 0.3,
-                    snap: { textContent: 1 },
-                    ease: "power2.out"
-                });
+                playerCount.textContent = newCount;
+                gsap.fromTo(playerCount, { scale: 1.0 }, { scale: 1.2, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" });
             }
         }
 
@@ -204,6 +200,12 @@ export class OnlinePlayersManager {
     updatePlayerStatus(isPlaying) {
         const uid = auth.currentUser?.uid || this.currentUid;
         if (!uid) return;
+        const now = Date.now();
+        if (this._lastPlayingState === isPlaying && this._lastStatusWriteTs && (now - this._lastStatusWriteTs) < 2000) {
+            return;
+        }
+        this._lastPlayingState = isPlaying;
+        this._lastStatusWriteTs = now;
         const userRef = ref(db, `online/${uid}`);
         set(userRef, {
             username: this.currentUsername || 'Player',
@@ -224,6 +226,10 @@ export class OnlinePlayersManager {
     }
 
     cleanup() {
+        if (this._unsubOnline) {
+            try { this._unsubOnline(); } catch (e) {}
+            this._unsubOnline = null;
+        }
         if (this.currentUid) {
             const userRef = ref(db, `online/${this.currentUid}`);
             set(userRef, null);

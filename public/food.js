@@ -1,3 +1,5 @@
+import { roundRect } from './canvasUtils.js';
+
 export class Food {
   constructor(gridSize, canvasSize) {
     this.position = { x: 0, y: 0 };
@@ -59,7 +61,7 @@ export class Food {
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(x + 2, y + 2, size, size, 5);
+    roundRect(ctx, x + 2, y + 2, size, size, 5);
     ctx.fill();
 
     // Highlight

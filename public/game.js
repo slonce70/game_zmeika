@@ -12,18 +12,12 @@ class Game {
     this.leaderboardManager = new LeaderboardManager();
     this.onlinePlayersManager = new OnlinePlayersManager();
     
-    setTimeout(() => {
-      this.updateSidebarLeaderboard();
-    }, 2000);
     
     // Initialize modals
     this.initializeModals();
     
     // Show login modal
     this.showLoginModal();
-
-    // Start periodic leaderboard refresh
-    this.startLeaderboardUpdates();
 
     // Cleanup when leaving the page
     window.addEventListener('beforeunload', () => {
@@ -32,7 +26,7 @@ class Game {
 
     // Re-apply UI on language change
     i18n.onChange(() => {
-      this.updateSidebarLeaderboard();
+      this.leaderboardManager.updateLeaderboardDisplay();
       if (this.pauseLayer) this.pauseLayer.innerHTML = `<div class=\"pause-text\">${i18n.t('paused')}</div>`;
     });
   }
@@ -56,6 +50,8 @@ class Game {
     const leaderboardBtn = document.querySelector('.leaderboard-btn');
     const closeLeaderboardBtn = document.getElementById('closeLeaderboard');
     const leaderboardModal = document.getElementById('leaderboardModal');
+    const highScoreModal = document.getElementById('highScoreModal');
+    const closeHighScoreBtn = document.getElementById('closeHighScore');
 
     leaderboardBtn.addEventListener('click', () => {
       this.showLeaderboard();
@@ -67,6 +63,13 @@ class Game {
       this.isPaused = false;
       requestAnimationFrame(this.gameLoop);
     });
+
+    if (closeHighScoreBtn) {
+      closeHighScoreBtn.addEventListener('click', () => {
+        highScoreModal.style.display = 'none';
+        this.handleRestart();
+      });
+    }
   }
 
   showLoginModal() {
@@ -85,7 +88,7 @@ class Game {
 
     scores.forEach((score, index) => {
       const row = document.createElement('tr');
-      if (score.username === this.leaderboardManager.currentPlayer) {
+      if (score.username === this.leaderboardManager.currentPlayerName) {
         row.classList.add('current-player');
       }
 
@@ -347,10 +350,15 @@ class Game {
           this.scoreManager.score
         );
         if (rank) {
-          setTimeout(() => {
-            alert(`New High Score! Rank: ${rank}\nScore: ${this.scoreManager.score}`);
+          // Show non-blocking modal instead of alert
+          const modal = document.getElementById('highScoreModal');
+          const body = document.getElementById('highScoreBody');
+          if (modal && body) {
+            body.innerHTML = `#${rank} — ${this.escapeHtml(this.leaderboardManager.currentPlayerName || 'Player')} — ${this.scoreManager.score}`;
+            modal.style.display = 'flex';
+          } else {
             this.handleRestart();
-          }, 500);
+          }
         } else {
           this.handleRestart();
         }
@@ -436,65 +444,7 @@ class Game {
       .replace(/'/g, "&#039;");
   }
 
-  updateSidebarLeaderboard() {
-    const sidebarLeaderboard = document.getElementById('sidebarLeaderboard');
-    const topPlayers = this.leaderboardManager.leaderboard;
-    
-    if (!sidebarLeaderboard || !Array.isArray(topPlayers)) return;
-    
-    sidebarLeaderboard.innerHTML = '';
-    
-    // Update active players counter in sidebar
-    const activePlayersCounter = document.getElementById('activePlayersCounter');
-    if (activePlayersCounter) {
-      activePlayersCounter.textContent = this.leaderboardManager.activePlayers;
-    }
-
-    // Render player cards in sidebar
-    topPlayers.forEach((player, index) => {
-      if (!player || !player.username) return;
-      
-      const playerCard = document.createElement('div');
-      playerCard.className = 'player-card';
-      if (player.uid === this.leaderboardManager.currentUid) {
-        playerCard.classList.add('current-player');
-      }
-
-      playerCard.innerHTML = `
-        <div class="player-rank">#${index + 1}</div>
-        <div class="player-info">
-          <div class="player-name">${this.escapeHtml(player.username)}</div>
-          <div class="player-score">${player.score || 0}</div>
-          <div class="player-date">${this.leaderboardManager.formatDate(player.date, i18n.lang)}</div>
-        </div>
-      `;
-
-      // Animate on score change
-      const previousScore = this.previousScores?.get(player.username);
-      if (previousScore && previousScore !== player.score) {
-        gsap.from(playerCard, {
-          backgroundColor: 'rgba(80, 200, 120, 0.4)',
-          duration: 1,
-          ease: 'power2.out'
-        });
-      }
-
-      sidebarLeaderboard.appendChild(playerCard);
-    });
-
-    // Save current scores to diff later
-    this.previousScores = new Map(
-      topPlayers.filter(player => player && player.username)
-        .map(player => [player.username, player.score])
-    );
-  }
-
-  startLeaderboardUpdates() {
-    // Periodic refresh (in addition to realtime updates)
-    setInterval(() => {
-      this.updateSidebarLeaderboard();
-    }, 10000);
-  }
+  // Sidebar leaderboard display is handled by LeaderboardManager subscriptions.
 
   cleanup() {
     this.leaderboardManager.cleanup();

@@ -20,7 +20,7 @@ export class LeaderboardManager {
     });
 
     // Subscribe to leaderboard changes with error handling
-    onValue(this.leaderboardRef, (snapshot) => {
+    this._unsubLeaderboard = onValue(this.leaderboardRef, (snapshot) => {
       try {
         const data = snapshot.val() || {};
         const filteredData = Object.entries(data)
@@ -46,7 +46,7 @@ export class LeaderboardManager {
     });
     
     // Subscribe to online players count
-    onValue(this.onlineRef, (snapshot) => {
+    this._unsubOnline = onValue(this.onlineRef, (snapshot) => {
       this.activePlayers = Object.keys(snapshot.val() || {}).length;
       this.updateActivePlayersDisplay();
     });
@@ -235,6 +235,14 @@ export class LeaderboardManager {
   }
 
   cleanup() {
+    if (this._unsubLeaderboard) {
+      try { this._unsubLeaderboard(); } catch (e) {}
+      this._unsubLeaderboard = null;
+    }
+    if (this._unsubOnline) {
+      try { this._unsubOnline(); } catch (e) {}
+      this._unsubOnline = null;
+    }
     if (this.currentUid) {
       const userRef = ref(db, 'online/' + this.currentUid);
       set(userRef, null);

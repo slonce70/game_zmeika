@@ -1,13 +1,15 @@
 {
   "rules": {
-    ".read": true,
+    ".read": false,
     "online": {
+      ".read": true,
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
       }
     },
     "leaderboard": {
+      ".read": true,
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
@@ -18,4 +20,3 @@
     }
   }
 }
-
