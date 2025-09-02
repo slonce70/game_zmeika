@@ -6,6 +6,7 @@ import { BonusFood } from "./bonusFood.js";
 import { ParticleSystem } from "./particles.js";
 import { OnlinePlayersManager } from "./onlinePlayersManager.js";
 import { i18n } from "./i18n.js";
+import { countryCodeToFlagEmoji } from "./geo.js";
 
 class Game {
   constructor() {
@@ -92,9 +93,10 @@ class Game {
         row.classList.add('current-player');
       }
 
+      const flag = score.countryCode ? countryCodeToFlagEmoji(score.countryCode) : '';
       row.innerHTML = `
         <td>${index + 1}</td>
-        <td>${this.escapeHtml(score.username)}</td>
+        <td>${flag ? `<span class="flag-emoji" title="${this.escapeHtml(score.countryName || score.countryCode)}">${flag}</span> ` : ''}${this.escapeHtml(score.username)}</td>
         <td>${score.score || 0}</td>
         <td>${this.leaderboardManager.formatDate(score.date, i18n.lang)}</td>
       `;

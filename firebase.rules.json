@@ -5,7 +5,8 @@
       ".read": true,
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
+        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])",
+        "countryCode": { ".validate": "newData.isString() && newData.val().length <= 2" }
       }
     },
     "leaderboard": {
@@ -15,7 +16,9 @@
         "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "username": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 15" },
         "date": { ".validate": "newData.isString()" },
-        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" }
+        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" },
+        "countryCode": { ".validate": "newData.isString() && newData.val().length <= 2" },
+        "countryName": { ".validate": "newData.isString() && newData.val().length <= 56" }
       }
     }
   }

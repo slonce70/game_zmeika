@@ -1,6 +1,7 @@
 import { db, auth } from "./firebaseConfig.js";
 import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+import { detectCountry, countryCodeToFlagEmoji } from "./geo.js";
 
 export class LeaderboardManager {
   constructor() {
@@ -9,6 +10,7 @@ export class LeaderboardManager {
     this.currentPlayerName = null;
     this.maxEntries = 10;
     this.activePlayers = 0;
+    this.country = { countryCode: '', countryName: '', flag: '' };
     
     // References using modular API
     this.leaderboardRef = ref(db, 'leaderboard');
@@ -19,13 +21,26 @@ export class LeaderboardManager {
       this.currentUid = user?.uid || null;
     });
 
+    // Resolve country early (non-blocking)
+    this.initCountry();
+
     // Subscribe to leaderboard changes with error handling
     this._unsubLeaderboard = onValue(this.leaderboardRef, (snapshot) => {
       try {
         const data = snapshot.val() || {};
-        const filteredData = Object.entries(data)
+        const entries = Object.entries(data)
           .map(([uid, entry]) => ({ uid, ...(entry || {}) }))
-          .filter(entry => entry && entry.username && (entry.score || 0) >= 0)
+          .filter(entry => entry && entry.username && (entry.score || 0) >= 0);
+
+        // Deduplicate by normalized username, keep highest score
+        const bestByName = new Map();
+        for (const e of entries) {
+          const key = (e.username || '').trim().toLowerCase();
+          const cur = bestByName.get(key);
+          if (!cur || (e.score || 0) > (cur.score || 0)) bestByName.set(key, e);
+        }
+
+        const filteredData = Array.from(bestByName.values())
           .sort((a, b) => (b.score || 0) - (a.score || 0))
           .slice(0, this.maxEntries);
 
@@ -84,16 +99,26 @@ export class LeaderboardManager {
         username: username || this.currentPlayerName || 'Player',
         score,
         date: new Date().toISOString(),
-        lastActive: serverTimestamp()
+        lastActive: serverTimestamp(),
+        countryCode: this.country?.countryCode || '',
+        countryName: this.country?.countryName || ''
       };
 
       await set(playerRef, newScore);
       // Update local list
       const leaderboardSnapshot = await get(this.leaderboardRef);
       const leaderboardData = leaderboardSnapshot.val() || {};
-      this.leaderboard = Object.entries(leaderboardData)
+      const entries = Object.entries(leaderboardData)
         .map(([id, entry]) => ({ uid: id, ...(entry || {}) }))
-        .filter(entry => entry && entry.username && (entry.score || 0) >= 0)
+        .filter(entry => entry && entry.username && (entry.score || 0) >= 0);
+
+      const bestByName = new Map();
+      for (const e of entries) {
+        const key = (e.username || '').trim().toLowerCase();
+        const cur = bestByName.get(key);
+        if (!cur || (e.score || 0) > (cur.score || 0)) bestByName.set(key, e);
+      }
+      this.leaderboard = Array.from(bestByName.values())
         .sort((a, b) => (b.score || 0) - (a.score || 0))
         .slice(0, this.maxEntries);
       
@@ -116,7 +141,9 @@ export class LeaderboardManager {
       await set(playerRef, {
         ...currentData,
         username,
-        lastActive: serverTimestamp()
+        lastActive: serverTimestamp(),
+        countryCode: this.country?.countryCode || currentData?.countryCode || '',
+        countryName: this.country?.countryName || currentData?.countryName || ''
       });
     } catch (e) {
       console.error('Failed to set username:', e);
@@ -136,12 +163,18 @@ export class LeaderboardManager {
     set(userRef, {
       username: this.currentPlayerName || 'Player',
       lastActive: serverTimestamp(),
-      isPlaying: true
+      isPlaying: true,
+      countryCode: this.country?.countryCode || ''
     });
     onDisconnect(userRef).remove();
     // Update lastActive in leaderboard
     const playerRef = ref(db, 'leaderboard/' + uid);
-    update(playerRef, { lastActive: serverTimestamp(), username: this.currentPlayerName || 'Player' });
+    update(playerRef, { 
+      lastActive: serverTimestamp(), 
+      username: this.currentPlayerName || 'Player',
+      countryCode: this.country?.countryCode || '',
+      countryName: this.country?.countryName || ''
+    });
   }
 
   updateActivePlayersDisplay() {
@@ -159,11 +192,12 @@ export class LeaderboardManager {
       sidebarLeaderboard.innerHTML = (Array.isArray(this.leaderboard) ? this.leaderboard : [])
         .map((entry, index) => {
           if (!entry || !entry.username) return '';
+          const flag = entry.countryCode ? countryCodeToFlagEmoji(entry.countryCode) : '';
           return `
             <div class="player-card ${entry.uid === this.currentUid ? 'current-player' : ''}">
               <div class="player-rank">#${index + 1}</div>
               <div class="player-info">
-                <div class="player-name">${this.escapeHtml(entry.username)}</div>
+                <div class="player-name">${flag ? `<span class="flag-emoji" title="${this.escapeHtml(entry.countryName || entry.countryCode)}">${flag}</span> ` : ''}${this.escapeHtml(entry.username)}</div>
                 <div class="player-score">${entry.score || 0}</div>
                 <div class="player-date">${this.formatDate(entry.date || new Date(), (localStorage.getItem('lang') || 'en'))}</div>
               </div>
@@ -175,6 +209,17 @@ export class LeaderboardManager {
     } catch (error) {
       console.error('Error updating leaderboard display:', error);
       sidebarLeaderboard.innerHTML = '';
+    }
+  }
+
+  async initCountry() {
+    try {
+      const data = await detectCountry();
+      if (data && data.countryCode) {
+        this.country = data;
+      }
+    } catch (e) {
+      // ignore
     }
   }
 

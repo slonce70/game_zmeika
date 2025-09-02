@@ -300,6 +300,11 @@ button:hover {
   margin-bottom: 4px;
 }
 
+.flag-emoji {
+  margin-right: 6px;
+  filter: saturate(1.1);
+}
+
 .player-score {
   font-size: 1em;
   color: var(--accent-color);

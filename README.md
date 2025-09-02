@@ -15,8 +15,9 @@
   - Переключатель языка (русский/английский)
 
 - В реальном времени
-  - Таблица лидеров (лучший результат на пользователя)
+  - Таблица лидеров (без дублей по нику: берётся лучший результат)
   - Онлайн‑присутствие игроков (статус playing/idle)
+  - Флаги стран в топ‑10 и в списке онлайн‑игроков
   - Firebase Realtime Database (клиент‑сайд)
 
 ## Как играть
@@ -65,20 +66,25 @@ python3 -m http.server 5173 -d dist
 ```json
 {
   "rules": {
-    ".read": true,
+    ".read": false,
     "online": {
+      ".read": true,
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])"
+        ".validate": "newData.hasChildren(['username','lastActive','isPlaying'])",
+        "countryCode": { ".validate": "newData.isString() && newData.val().length <= 2" }
       }
     },
     "leaderboard": {
+      ".read": true,
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         "score": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "username": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 15" },
         "date": { ".validate": "newData.isString()" },
-        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" }
+        "lastActive": { ".validate": "newData.isNumber() || newData.val() == now" },
+        "countryCode": { ".validate": "newData.isString() && newData.val().length <= 2" },
+        "countryName": { ".validate": "newData.isString() && newData.val().length <= 56" }
       }
     }
   }
@@ -111,8 +117,9 @@ Modern Snake with a realtime leaderboard, online presence, mobile controls, GSAP
   - Language switcher (English/Russian)
 
 - Realtime
-  - Leaderboard (best score per user)
+  - Leaderboard (dedup by username: best score only)
   - Online presence (playing/idle)
+  - Country flags in Top‑10 and online list
   - Firebase Realtime Database (client‑side only)
 
 ### How to Play
@@ -148,4 +155,3 @@ python3 -m http.server 5173 -d dist
 
 - Connect repo → set Build Command `npm run build`, Output `dist`
 - Push to main → deploys to https://game-zmeika-lilac.vercel.app
-

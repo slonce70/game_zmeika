@@ -1,5 +1,6 @@
 import { db, auth } from "./firebaseConfig.js";
 import { ref, onValue, get, set, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
+import { detectCountry, countryCodeToFlagEmoji } from "./geo.js";
 // GSAP is loaded via CDN in index.html and available as global `gsap`
 
 export class OnlinePlayersManager {
@@ -9,6 +10,7 @@ export class OnlinePlayersManager {
         this.currentUsername = null;
         this.sidebarVisible = window.innerWidth > 768;
         this.lastRender = new Map(); // Track changes
+        this.country = { countryCode: '', countryName: '', flag: '' };
         
         // DOM elements
         this.sidebar = document.getElementById('onlinePlayersSidebar');
@@ -21,6 +23,7 @@ export class OnlinePlayersManager {
         this.currentUid = auth.currentUser?.uid || null;
         
         this.initializeUI();
+        this.initCountry();
         this.setupEventListeners();
         this.startOnlinePlayersSubscription();
     }
@@ -72,7 +75,8 @@ export class OnlinePlayersManager {
                     uid,
                     username: status?.username || 'Player',
                     lastActive: status?.lastActive || Date.now(),
-                    isPlaying: !!status?.isPlaying
+                    isPlaying: !!status?.isPlaying,
+                    countryCode: status?.countryCode || ''
                 });
             });
             
@@ -142,7 +146,7 @@ export class OnlinePlayersManager {
             
             const newHtml = `
                 <div class="player-status${player.isPlaying ? '' : ' idle'}"></div>
-                <div class="player-name">${this.escapeHtml(player.username)}</div>
+                <div class="player-name">${player.countryCode ? `<span class=\"flag-emoji\" title=\"${this.escapeHtml(player.countryCode)}\">${countryCodeToFlagEmoji(player.countryCode)}</span> ` : ''}${this.escapeHtml(player.username)}</div>
             `;
 
             if (playerElement.innerHTML !== newHtml) {
@@ -236,7 +240,8 @@ export class OnlinePlayersManager {
         set(userRef, {
             username: this.currentUsername || 'Player',
             lastActive: serverTimestamp(),
-            isPlaying
+            isPlaying,
+            countryCode: this.country?.countryCode || ''
         });
     }
 
@@ -259,6 +264,17 @@ export class OnlinePlayersManager {
         if (this.currentUid) {
             const userRef = ref(db, `online/${this.currentUid}`);
             set(userRef, null);
+        }
+    }
+
+    async initCountry() {
+        try {
+            const data = await detectCountry();
+            if (data && data.countryCode) {
+                this.country = data;
+            }
+        } catch (e) {
+            // ignore
         }
     }
 }
