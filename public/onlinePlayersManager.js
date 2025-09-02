@@ -34,6 +34,23 @@ export class OnlinePlayersManager {
 
         // Mobile indicator handler
         this.mobileIndicator.addEventListener('click', () => this.toggleSidebar());
+
+        // Auto-hide on mobile after short delay
+        if (window.innerWidth <= 768) {
+            clearTimeout(this._autoHideTimer);
+            this._autoHideTimer = setTimeout(() => {
+                if (this.sidebarVisible) this.toggleSidebar();
+            }, 4000);
+            // Cancel auto-hide on first interaction
+            ['click','touchstart'].forEach(evt => {
+                this.sidebar.addEventListener(evt, () => {
+                    if (this._autoHideTimer) {
+                        clearTimeout(this._autoHideTimer);
+                        this._autoHideTimer = null;
+                    }
+                }, { once: true });
+            });
+        }
     }
 
     setupEventListeners() {
@@ -134,12 +151,17 @@ export class OnlinePlayersManager {
 
             if (!existingElement) {
                 this.playersList.appendChild(playerElement);
-                gsap.to(playerElement, {
-                    opacity: 1,
-                    x: 0,
-                    duration: 0.3,
-                    ease: "power2.out"
-                });
+                if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    gsap.to(playerElement, {
+                        opacity: 1,
+                        x: 0,
+                        duration: 0.3,
+                        ease: "power2.out"
+                    });
+                } else {
+                    playerElement.style.opacity = '1';
+                    playerElement.style.transform = 'none';
+                }
             }
             
             currentElements.delete(player.uid);
@@ -147,13 +169,17 @@ export class OnlinePlayersManager {
 
         // Remove missing elements with animation
         currentElements.forEach(element => {
-            gsap.to(element, {
-                opacity: 0,
-                x: 10,
-                duration: 0.3,
-                ease: "power2.in",
-                onComplete: () => element.remove()
-            });
+            if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                gsap.to(element, {
+                    opacity: 0,
+                    x: 10,
+                    duration: 0.3,
+                    ease: "power2.in",
+                    onComplete: () => element.remove()
+                });
+            } else {
+                element.remove();
+            }
         });
     }
 

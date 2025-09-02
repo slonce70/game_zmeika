@@ -605,8 +605,8 @@ button:hover {
 }
 
 .control-btn {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--accent-color);
   color: var(--text-color);
@@ -633,6 +633,30 @@ button:hover {
   .mobile-controls {
     display: flex;
   }
+}
+
+/* Left-handed layout helper */
+body.lefty .mobile-controls {
+  align-items: flex-start;
+}
+body.lefty .mobile-controls-row {
+  justify-content: flex-start;
+}
+
+/* Options under controls */
+.options {
+  margin-top: 10px;
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  justify-content: center;
+}
+.options input { vertical-align: middle; }
+.options label { cursor: pointer; user-select: none; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }
 
 /* Online players sidebar */

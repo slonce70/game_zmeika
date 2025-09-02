@@ -40,22 +40,22 @@
                 </div>
                 <div class="score-container">
                     <span class="score-label" data-i18n="score">Score:</span>
-                    <span class="score-value">0</span>
+                    <span class="score-value" aria-live="polite" aria-atomic="true">0</span>
                 </div>
             </div>
             <div class="canvas-container"></div>
             
             <!-- Mobile controls -->
-            <div class="mobile-controls">
+            <div class="mobile-controls" aria-label="Mobile controls">
                 <div class="mobile-controls-row">
-                    <button class="control-btn up-btn" data-direction="up">↑</button>
+                    <button class="control-btn up-btn" data-direction="up" aria-label="Up">↑</button>
                 </div>
                 <div class="mobile-controls-row">
-                    <button class="control-btn left-btn" data-direction="left">←</button>
-                    <button class="control-btn right-btn" data-direction="right">→</button>
+                    <button class="control-btn left-btn" data-direction="left" aria-label="Left">←</button>
+                    <button class="control-btn right-btn" data-direction="right" aria-label="Right">→</button>
                 </div>
                 <div class="mobile-controls-row">
-                    <button class="control-btn down-btn" data-direction="down">↓</button>
+                    <button class="control-btn down-btn" data-direction="down" aria-label="Down">↓</button>
                 </div>
             </div>
 
@@ -64,6 +64,10 @@
                     <p data-i18n="use_arrows">Use arrow keys to control the snake</p>
                     <button class="restart-btn" data-i18n="restart">Restart Game</button>
                     <button class="leaderboard-btn" data-i18n="leaderboard_full">Full Leaderboard</button>
+                    <div class="options">
+                        <label><input type="checkbox" id="optVibrate" checked> <span data-i18n="vibration">Vibration</span></label>
+                        <label><input type="checkbox" id="optLeftHanded"> <span data-i18n="left_handed">Left‑handed</span></label>
+                    </div>
                 </div>
             </div>
         </div>

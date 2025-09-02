@@ -19,7 +19,9 @@ const DICT = {
     yesterday: 'Yesterday',
     online_sidebar: 'Online Players',
     new_high_score: 'New High Score!',
-    continue: 'Continue'
+    continue: 'Continue',
+    vibration: 'Vibration',
+    left_handed: 'Left‑handed'
   },
   ru: {
     title: 'Snake Game',
@@ -41,7 +43,9 @@ const DICT = {
     yesterday: 'Вчера',
     online_sidebar: 'Онлайн игроки',
     new_high_score: 'Новый рекорд!',
-    continue: 'Продолжить'
+    continue: 'Продолжить',
+    vibration: 'Виброотклик',
+    left_handed: 'Для левшей'
   }
 };
 

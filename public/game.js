@@ -136,13 +136,15 @@ class Game {
     this.accumulator = 0;
     this._lastFrameTs = 0;
 
-    // Intro animation
-    gsap.from(this.canvas, {
-      duration: 0.5,
-      opacity: 0,
-      scale: 0.9,
-      ease: "back.out"
-    });
+    // Intro animation (respect reduced motion)
+    if (!this.shouldReduceMotion()) {
+      gsap.from(this.canvas, {
+        duration: 0.5,
+        opacity: 0,
+        scale: 0.9,
+        ease: "back.out"
+      });
+    }
 
     // Add touch/mouse handlers for mobile controls
     const mobileControls = document.querySelector('.mobile-controls');
@@ -160,6 +162,15 @@ class Game {
         });
       });
     }
+
+    // Add swipe controls on canvas
+    this.addSwipeControls();
+
+    // Apply user options
+    this.setupOptions();
+
+    // Try to keep screen awake on mobile
+    this.requestWakeLock();
 
     // Create DOM overlay for floating texts and pause
     this.overlay = document.createElement('div');
@@ -249,7 +260,7 @@ class Game {
       this.interval = Math.max(80, 200 - this.scoreManager.score * 5);
 
       // Effects: vibration, particles, floating text
-      if (navigator.vibrate) navigator.vibrate(10);
+      if (this.vibrationEnabled && navigator.vibrate) navigator.vibrate(10);
       this.spawnEatParticles('#ff5555');
       this.showFloatingText('+1', '#ff8888');
     }
@@ -262,7 +273,7 @@ class Game {
       this.scoreManager.score += 5;
       this.updateScoreUI();
       this.bonusFood.active = false;
-      if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      if (this.vibrationEnabled && navigator.vibrate) navigator.vibrate([20, 40, 20]);
       this.spawnEatParticles('#ffd700');
       this.showFloatingText('+5', '#ffd700');
       // Temporary slow-down for 2s
@@ -334,13 +345,15 @@ class Game {
     // Update player status in presence
     this.onlinePlayersManager.updatePlayerStatus(false);
 
-    gsap.to(this.canvas, {
-      duration: 0.5,
-      opacity: 0.5,
-      scale: 0.95,
-      ease: "power2.out"
-    });
-    if (navigator.vibrate) navigator.vibrate(120);
+    if (!this.shouldReduceMotion()) {
+      gsap.to(this.canvas, {
+        duration: 0.5,
+        opacity: 0.5,
+        scale: 0.95,
+        ease: "power2.out"
+      });
+    }
+    if (this.vibrationEnabled && navigator.vibrate) navigator.vibrate(120);
 
     // If needed, save high score
     if (this.scoreManager.score > 0 && this.leaderboardManager.isHighScore(this.scoreManager.score)) {
@@ -379,12 +392,14 @@ class Game {
     this.interval = 200;
     this.isPaused = false;
     this.onlinePlayersManager.updatePlayerStatus(true);
-    gsap.to(this.canvas, {
-      duration: 0.5,
-      opacity: 1,
-      scale: 1,
-      ease: "power2.out"
-    });
+    if (!this.shouldReduceMotion()) {
+      gsap.to(this.canvas, {
+        duration: 0.5,
+        opacity: 1,
+        scale: 1,
+        ease: "power2.out"
+      });
+    }
     document.querySelector('.score-value').textContent = '0';
     document.getElementById('leaderboardModal').style.display = 'none';
     requestAnimationFrame(this.gameLoop);
@@ -420,7 +435,12 @@ class Game {
     el.style.left = `calc(${ox}% - 10px)`;
     el.style.top = `calc(${oy}% - 10px)`;
     this.overlay.appendChild(el);
-    gsap.to(el, { y: -20, opacity: 0, duration: 0.8, ease: 'power2.out', onComplete: () => el.remove() });
+    if (!this.shouldReduceMotion()) {
+      gsap.to(el, { y: -20, opacity: 0, duration: 0.8, ease: 'power2.out', onComplete: () => el.remove() });
+    } else {
+      el.style.opacity = '0';
+      el.remove();
+    }
   }
 
   scheduleBonus() {
@@ -428,9 +448,86 @@ class Game {
     const delay = 8000 + Math.random() * 8000; // 8–16s
     this._bonusTimer = setTimeout(() => {
       this.bonusFood.spawn(this.gridSize, { width: this.canvas.width, height: this.canvas.height }, 8000);
-      gsap.fromTo(this.canvas, { filter: 'brightness(1.0)' }, { filter: 'brightness(1.2)', duration: 0.2, yoyo: true, repeat: 1 });
+      if (!this.shouldReduceMotion()) {
+        gsap.fromTo(this.canvas, { filter: 'brightness(1.0)' }, { filter: 'brightness(1.2)', duration: 0.2, yoyo: true, repeat: 1 });
+      }
       this.scheduleBonus();
     }, delay);
+  }
+
+  shouldReduceMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  addSwipeControls() {
+    const el = this.canvas;
+    if (!el) return;
+    let sx = 0, sy = 0, st = 0;
+    const threshold = 24; // px
+    const maxTapTime = 400; // ms
+    const onStart = (e) => {
+      const t = e.touches ? e.touches[0] : e;
+      sx = t.clientX; sy = t.clientY; st = Date.now();
+    };
+    const onEnd = (e) => {
+      const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]) || e;
+      const dx = (t.clientX - sx);
+      const dy = (t.clientY - sy);
+      const adx = Math.abs(dx), ady = Math.abs(dy);
+      const dt = Date.now() - st;
+      if (dt > maxTapTime && adx < threshold && ady < threshold) return;
+      if (adx < threshold && ady < threshold) return;
+      e.preventDefault();
+      if (adx > ady) {
+        this.handleMobileControl(dx > 0 ? 'right' : 'left');
+      } else {
+        this.handleMobileControl(dy > 0 ? 'down' : 'up');
+      }
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: false });
+  }
+
+  setupOptions() {
+    // Vibration toggle
+    const storedV = localStorage.getItem('optVibrate');
+    this.vibrationEnabled = storedV == null ? true : storedV === '1';
+    const vib = document.getElementById('optVibrate');
+    if (vib) {
+      vib.checked = this.vibrationEnabled;
+      vib.addEventListener('change', () => {
+        this.vibrationEnabled = !!vib.checked;
+        localStorage.setItem('optVibrate', this.vibrationEnabled ? '1' : '0');
+      });
+    }
+
+    // Left-handed toggle
+    const storedL = localStorage.getItem('optLefty');
+    const leftyEnabled = storedL === '1';
+    document.body.classList.toggle('lefty', leftyEnabled);
+    const lefty = document.getElementById('optLeftHanded');
+    if (lefty) {
+      lefty.checked = leftyEnabled;
+      lefty.addEventListener('change', () => {
+        document.body.classList.toggle('lefty', !!lefty.checked);
+        localStorage.setItem('optLefty', lefty.checked ? '1' : '0');
+      });
+    }
+  }
+
+  async requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        this._wakeLock = await navigator.wakeLock.request('screen');
+        document.addEventListener('visibilitychange', async () => {
+          if (document.visibilityState === 'visible' && this._wakeLock && this._wakeLock.released) {
+            try { this._wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+          }
+        });
+      }
+    } catch (e) {
+      // Ignore
+    }
   }
 
   escapeHtml(unsafe) {
