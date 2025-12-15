@@ -195,27 +195,40 @@ class Game {
 
     this.scheduleBonus();
     requestAnimationFrame(this.gameLoop);
+    this.preRenderGrid();
     this.drawGrid();
     // Mark player as playing now (presence)
     this.onlinePlayersManager.updatePlayerStatus(true);
   }
 
-  drawGrid() {
-    this.ctx.strokeStyle = '#2a2a2a';
-    this.ctx.lineWidth = 0.5;
+  /**
+   * Optimization: Pre-render the static grid to an off-screen canvas.
+   * This avoids hundreds of path calculations and stroke calls per frame.
+   */
+  preRenderGrid() {
+    this.gridCanvas = document.createElement('canvas');
+    this.gridCanvas.width = this.canvas.width;
+    this.gridCanvas.height = this.canvas.height;
+    const ctx = this.gridCanvas.getContext('2d');
 
-    for (let x = 0; x <= this.canvas.width; x += this.gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.canvas.height);
-      this.ctx.stroke();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 0.5;
+
+    ctx.beginPath();
+    for (let x = 0; x <= this.gridCanvas.width; x += this.gridSize) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, this.gridCanvas.height);
     }
+    for (let y = 0; y <= this.gridCanvas.height; y += this.gridSize) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.gridCanvas.width, y);
+    }
+    ctx.stroke();
+  }
 
-    for (let y = 0; y <= this.canvas.height; y += this.gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.canvas.width, y);
-      this.ctx.stroke();
+  drawGrid() {
+    if (this.gridCanvas) {
+      this.ctx.drawImage(this.gridCanvas, 0, 0);
     }
   }
 
