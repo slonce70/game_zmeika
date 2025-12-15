@@ -1,7 +1,7 @@
 import { db, auth } from "./firebaseConfig.js";
-import { ref, onValue, get, set, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
+import { ref, onValue, get, set, onDisconnect, serverTimestamp } from "firebase/database";
 import { detectCountry, countryCodeToFlagEmoji } from "./geo.js";
-// GSAP is loaded via CDN in index.html and available as global `gsap`
+import { gsap } from "gsap";
 
 export class OnlinePlayersManager {
     constructor() {

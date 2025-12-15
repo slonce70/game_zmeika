@@ -1,6 +1,6 @@
 import { db, auth } from "./firebaseConfig.js";
-import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+import { ref, onValue, get, set, update, onDisconnect, serverTimestamp } from "firebase/database";
+import { onAuthStateChanged } from "firebase/auth";
 import { detectCountry, countryCodeToFlagEmoji } from "./geo.js";
 
 export class LeaderboardManager {
@@ -293,4 +293,4 @@ export class LeaderboardManager {
       set(userRef, null);
     }
   }
-} 
+}

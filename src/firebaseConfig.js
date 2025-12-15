@@ -1,7 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBrAEG6Da5e_8Zmetlo_hT8B47RrCdcg0E",
@@ -25,4 +25,4 @@ const auth = getAuth(app);
 // Anonymous auth to satisfy secure DB rules
 signInAnonymously(auth).catch((e) => console.error('Anonymous auth failed:', e));
 
-export { db, auth }; 
+export { db, auth };

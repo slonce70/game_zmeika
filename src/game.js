@@ -7,12 +7,14 @@ import { ParticleSystem } from "./particles.js";
 import { OnlinePlayersManager } from "./onlinePlayersManager.js";
 import { i18n } from "./i18n.js";
 import { countryCodeToFlagEmoji } from "./geo.js";
+import { InputHandler } from "./InputHandler.js";
+import { gsap } from "gsap";
+import "./style.css";
 
 class Game {
   constructor() {
     this.leaderboardManager = new LeaderboardManager();
     this.onlinePlayersManager = new OnlinePlayersManager();
-    
     
     // Initialize modals
     this.initializeModals();
@@ -26,6 +28,13 @@ class Game {
     });
 
     // Re-apply UI on language change
+    i18n.apply(); // Apply initial
+    const select = document.getElementById('langSelect');
+    if (select) {
+        select.value = i18n.lang;
+        select.addEventListener('change', () => i18n.setLang(select.value));
+    }
+
     i18n.onChange(() => {
       this.leaderboardManager.updateLeaderboardDisplay();
       if (this.pauseLayer) this.pauseLayer.innerHTML = `<div class=\"pause-text\">${i18n.t('paused')}</div>`;
@@ -124,13 +133,14 @@ class Game {
     this.scoreManager = new ScoreManager();
     this.particles = new ParticleSystem();
 
+    // Initialize Input Handler
+    this.inputHandler = new InputHandler(this);
+
     // Bind methods
     this.gameLoop = this.gameLoop.bind(this);
-    this.handleInput = this.handleInput.bind(this);
     this.handleRestart = this.handleRestart.bind(this);
     
     // Add input events
-    document.addEventListener('keydown', this.handleInput);
     document.querySelector('.restart-btn').addEventListener('click', this.handleRestart);
 
     this.lastTime = 0;
@@ -147,26 +157,6 @@ class Game {
         ease: "back.out"
       });
     }
-
-    // Add touch/mouse handlers for mobile controls
-    const mobileControls = document.querySelector('.mobile-controls');
-    if (mobileControls) {
-      const buttons = mobileControls.querySelectorAll('.control-btn');
-      buttons.forEach(button => {
-        ['touchstart', 'mousedown'].forEach(eventType => {
-          button.addEventListener(eventType, (e) => {
-            e.preventDefault();
-            const direction = button.dataset.direction;
-            if (direction) {
-              this.handleMobileControl(direction);
-            }
-          });
-        });
-      });
-    }
-
-    // Add swipe controls on canvas
-    this.addSwipeControls();
 
     // Apply user options
     this.setupOptions();
@@ -306,40 +296,10 @@ class Game {
     this.particles.draw(this.ctx);
   }
 
-  handleInput(e) {
-    if (e.key === ' ') {
-      this.isPaused = !this.isPaused;
-      if (this.pauseLayer) this.pauseLayer.style.display = this.isPaused ? 'flex' : 'none';
-      if (!this.isPaused) requestAnimationFrame(this.gameLoop);
-      return;
-    }
-    
-    const key = e.key.replace('Arrow', '').toLowerCase();
-    const directions = {
-      right: ['up', 'down'],
-      left: ['up', 'down'],
-      up: ['left', 'right'],
-      down: ['left', 'right']
-    };
-    
-    if (directions[this.snake.direction] && directions[this.snake.direction].includes(key)) {
-      this.snake.newDirection = key;
-    }
-  }
-
-  handleMobileControl(direction) {
-    if (this.isPaused) return;
-
-    const directions = {
-      right: ['up', 'down'],
-      left: ['up', 'down'],
-      up: ['left', 'right'],
-      down: ['left', 'right']
-    };
-    
-    if (directions[this.snake.direction] && directions[this.snake.direction].includes(direction)) {
-      this.snake.newDirection = direction;
-    }
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    if (this.pauseLayer) this.pauseLayer.style.display = this.isPaused ? 'flex' : 'none';
+    if (!this.isPaused) requestAnimationFrame(this.gameLoop);
   }
 
   async gameOver() {
@@ -461,35 +421,6 @@ class Game {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
-  addSwipeControls() {
-    const el = this.canvas;
-    if (!el) return;
-    let sx = 0, sy = 0, st = 0;
-    const threshold = 24; // px
-    const maxTapTime = 400; // ms
-    const onStart = (e) => {
-      const t = e.touches ? e.touches[0] : e;
-      sx = t.clientX; sy = t.clientY; st = Date.now();
-    };
-    const onEnd = (e) => {
-      const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]) || e;
-      const dx = (t.clientX - sx);
-      const dy = (t.clientY - sy);
-      const adx = Math.abs(dx), ady = Math.abs(dy);
-      const dt = Date.now() - st;
-      if (dt > maxTapTime && adx < threshold && ady < threshold) return;
-      if (adx < threshold && ady < threshold) return;
-      e.preventDefault();
-      if (adx > ady) {
-        this.handleMobileControl(dx > 0 ? 'right' : 'left');
-      } else {
-        this.handleMobileControl(dy > 0 ? 'down' : 'up');
-      }
-    };
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchend', onEnd, { passive: false });
-  }
-
   setupOptions() {
     // Vibration toggle
     const storedV = localStorage.getItem('optVibrate');
@@ -543,14 +474,15 @@ class Game {
       .replace(/'/g, "&#039;");
   }
 
-  // Sidebar leaderboard display is handled by LeaderboardManager subscriptions.
-
   cleanup() {
     this.leaderboardManager.cleanup();
     this.onlinePlayersManager.cleanup();
+    if (this.inputHandler) this.inputHandler.cleanup();
+    clearTimeout(this._bonusTimer);
+    clearTimeout(this._slowResetTimer);
   }
 }
 
 window.onload = () => {
   new Game();
-}; 
+};
