@@ -6,17 +6,38 @@ export class BonusFood extends Food {
     super(gridSize, canvasSize);
     this.active = false;
     this.expiresAt = 0;
+    this.glow = 1;
+    this._tween = null;
   }
 
   spawn(gridSize, canvasSize, lifetimeMs = 8000) {
     this.respawn(gridSize, canvasSize);
     this.active = true;
     this.expiresAt = performance.now() + lifetimeMs;
+
+    if (this._tween) this._tween.kill();
+    this.glow = 1;
+    this._tween = gsap.to(this, {
+      glow: 1.5,
+      duration: 0.7,
+      ease: 'power1.inOut',
+      yoyo: true,
+      repeat: -1
+    });
+  }
+
+  deactivate() {
+    this.active = false;
+    if (this._tween) {
+      this._tween.kill();
+      this._tween = null;
+    }
+    this.glow = 1;
   }
 
   maybeExpire(now) {
     if (this.active && now >= this.expiresAt) {
-      this.active = false;
+      this.deactivate();
     }
   }
 
@@ -28,14 +49,15 @@ export class BonusFood extends Food {
     const size = gridSize - 4;
 
     // Glow
+    const glowSize = size * 1.2 * this.glow;
     const glow = ctx.createRadialGradient(
       x + size/2 + 2, y + size/2 + 2, 0,
-      x + size/2 + 2, y + size/2 + 2, size * 1.6
+      x + size/2 + 2, y + size/2 + 2, glowSize
     );
-    glow.addColorStop(0, 'rgba(255, 215, 0, 0.35)');
+    glow.addColorStop(0, 'rgba(255, 215, 0, 0.45)');
     glow.addColorStop(1, 'rgba(255, 215, 0, 0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x - size/2, y - size/2, size * 2, size * 2);
+    ctx.fillRect(x + size/2 + 2 - glowSize, y + size/2 + 2 - glowSize, glowSize * 2, glowSize * 2);
 
     // Main golden square
     const gradient = ctx.createLinearGradient(x, y, x + size, y + size);

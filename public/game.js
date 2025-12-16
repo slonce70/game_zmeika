@@ -62,7 +62,6 @@ class Game {
     closeLeaderboardBtn.addEventListener('click', () => {
       leaderboardModal.style.display = 'none';
       this.isPaused = false;
-      requestAnimationFrame(this.gameLoop);
     });
 
     if (closeHighScoreBtn) {
@@ -116,6 +115,7 @@ class Game {
 
     this.gridSize = 20;
     this.isPaused = false;
+    this.isGameOver = false;
     
     // Create game objects
     this.snake = new Snake();
@@ -137,6 +137,7 @@ class Game {
     this.interval = 200; // update interval in ms
     this.accumulator = 0;
     this._lastFrameTs = 0;
+    this._lastGameTimestamp = 0;
 
     // Intro animation (respect reduced motion)
     if (!this.shouldReduceMotion()) {
@@ -194,7 +195,7 @@ class Game {
     this.overlay.appendChild(this.pauseLayer);
 
     this.scheduleBonus();
-    requestAnimationFrame(this.gameLoop);
+    gsap.ticker.add(this.gameLoop);
     this.drawGrid();
     // Mark player as playing now (presence)
     this.onlinePlayersManager.updatePlayerStatus(true);
@@ -219,34 +220,27 @@ class Game {
     }
   }
 
-  gameLoop(timestamp) {
-    if (this.isPaused) return;
+  gameLoop(time, deltaTime, frame) {
+    if (this.isPaused && !this.isGameOver) return;
     
-    if (!this.lastTime) this.lastTime = timestamp;
-    const delta = timestamp - this.lastTime;
-    this.accumulator += delta;
-    const frameDelta = timestamp - (this._lastFrameTs || timestamp);
-    this._lastFrameTs = timestamp;
-
-    if (this.accumulator >= this.interval) {
+    // Update game logic at a fixed interval
+    if (!this.isGameOver && time - this._lastGameTimestamp >= this.interval) {
       this.update();
-      this.accumulator = 0;
+      this._lastGameTimestamp = time;
     }
     
-    // Update particles every frame
-    this.particles.update(frameDelta);
+    this.particles.update(deltaTime);
     this.draw();
-    this.lastTime = timestamp;
-    requestAnimationFrame(this.gameLoop);
   }
 
   update() {
     if (this.isPaused) return;
     
-    this.snake.update();
+    this.snake.update(this.interval);
     
     // Check if snake ate normal food
-    if (this.snake.body[0].x === this.food.position.x && this.snake.body[0].y === this.food.position.y) {
+    const head = this.snake.body[0];
+    if (head.x === this.food.position.x && head.y === this.food.position.y) {
       this.snake.grow();
       this.scoreManager.incrementScore();
       this.food.respawn(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
@@ -274,7 +268,7 @@ class Game {
       for (let i = 0; i < 5; i++) this.snake.grow();
       this.scoreManager.score += 5;
       this.updateScoreUI();
-      this.bonusFood.active = false;
+      this.bonusFood.deactivate();
       if (this.vibrationEnabled && navigator.vibrate) navigator.vibrate([20, 40, 20]);
       this.spawnEatParticles('#ffd700');
       this.showFloatingText('+5', '#ffd700');
@@ -310,7 +304,6 @@ class Game {
     if (e.key === ' ') {
       this.isPaused = !this.isPaused;
       if (this.pauseLayer) this.pauseLayer.style.display = this.isPaused ? 'flex' : 'none';
-      if (!this.isPaused) requestAnimationFrame(this.gameLoop);
       return;
     }
     
@@ -343,47 +336,59 @@ class Game {
   }
 
   async gameOver() {
+    if (this.isGameOver) return;
+    this.isGameOver = true;
     this.isPaused = true;
     // Update player status in presence
     this.onlinePlayersManager.updatePlayerStatus(false);
 
-    if (!this.shouldReduceMotion()) {
-      gsap.to(this.canvas, {
-        duration: 0.5,
-        opacity: 0.5,
-        scale: 0.95,
-        ease: "power2.out"
-      });
-    }
     if (this.vibrationEnabled && navigator.vibrate) navigator.vibrate(120);
 
-    // If needed, save high score
-    if (this.scoreManager.score > 0 && this.leaderboardManager.isHighScore(this.scoreManager.score)) {
-      try {
-        const rank = await this.leaderboardManager.saveScore(
-          this.leaderboardManager.currentPlayer,
-          this.scoreManager.score
-        );
-        if (rank) {
-          // Show non-blocking modal instead of alert
-          const modal = document.getElementById('highScoreModal');
-          const body = document.getElementById('highScoreBody');
-          if (modal && body) {
-            body.innerHTML = `#${rank} — ${this.escapeHtml(this.leaderboardManager.currentPlayerName || 'Player')} — ${this.scoreManager.score}`;
-            modal.style.display = 'flex';
+    const proceed = async () => {
+      // If needed, save high score
+      if (this.scoreManager.score > 0 && this.leaderboardManager.isHighScore(this.scoreManager.score)) {
+        try {
+          const rank = await this.leaderboardManager.saveScore(
+            this.leaderboardManager.currentPlayer,
+            this.scoreManager.score
+          );
+          if (rank) {
+            // Show non-blocking modal instead of alert
+            const modal = document.getElementById('highScoreModal');
+            const body = document.getElementById('highScoreBody');
+            if (modal && body) {
+              body.innerHTML = `#${rank} — ${this.escapeHtml(this.leaderboardManager.currentPlayerName || 'Player')} — ${this.scoreManager.score}`;
+              modal.style.display = 'flex';
+            } else {
+              this.handleRestart();
+            }
           } else {
             this.handleRestart();
           }
-        } else {
+        } catch (error) {
+          console.error('Failed to save score:', error);
           this.handleRestart();
         }
-      } catch (error) {
-        console.error('Failed to save score:', error);
-        this.handleRestart();
+      } else {
+        // Otherwise restart silently after a delay
+        setTimeout(() => this.handleRestart(), 500);
       }
+    };
+
+    if (this.shouldReduceMotion()) {
+      proceed();
     } else {
-      // Otherwise restart silently
-      this.handleRestart();
+      this.snake.flash(() => {
+        this.snake.breakApart();
+        gsap.to(this.canvas, {
+          duration: 0.5,
+          opacity: 0.5,
+          scale: 0.95,
+          ease: "power2.out",
+          delay: 0.5,
+          onComplete: proceed
+        });
+      });
     }
   }
 
@@ -393,6 +398,7 @@ class Game {
     this.food.respawn(this.gridSize, { width: this.canvas.width, height: this.canvas.height });
     this.interval = 200;
     this.isPaused = false;
+    this.isGameOver = false;
     this.onlinePlayersManager.updatePlayerStatus(true);
     if (!this.shouldReduceMotion()) {
       gsap.to(this.canvas, {
@@ -404,7 +410,6 @@ class Game {
     }
     document.querySelector('.score-value').textContent = '0';
     document.getElementById('leaderboardModal').style.display = 'none';
-    requestAnimationFrame(this.gameLoop);
   }
 
   updateScoreUI() {

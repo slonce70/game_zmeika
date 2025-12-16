@@ -11,8 +11,8 @@ export class Particle {
     this.color = options.color || 'rgba(255,100,100,1)';
     this.life = 0;
     this.maxLife = options.maxLife || 600; // ms
-    this.gravity = options.gravity || 0.0015;
-    this.friction = options.friction || 0.98;
+    this.gravity = options.gravity || 0.0015 + Math.random() * 0.001;
+    this.friction = options.friction || 0.97 + Math.random() * 0.02;
   }
 
   update(dt) {
@@ -42,16 +42,18 @@ export class ParticleSystem {
     this.particles = [];
   }
 
-  spawnExplosion(x, y, count = 20, color = 'rgba(255,100,100,1)') {
+  spawnExplosion(x, y, count = 30, color = 'rgba(255,100,100,1)') {
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
-      const speed = 0.7 + Math.random() * 2.5;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 3.5;
+      const colorVariation = `rgba(${Math.floor(Math.random() * 50 + 205)},${Math.floor(Math.random() * 50 + 80)},${Math.floor(Math.random() * 50 + 80)},1)`;
+
       this.particles.push(new Particle(x, y, {
         angle,
         speed,
-        size: 1.5 + Math.random() * 2.5,
-        color,
-        maxLife: 500 + Math.random() * 500
+        size: 2 + Math.random() * 3,
+        color: i % 2 === 0 ? color : colorVariation,
+        maxLife: 600 + Math.random() * 600
       }));
     }
   }
